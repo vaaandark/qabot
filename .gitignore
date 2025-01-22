@@ -1,0 +1,26 @@
+# Go toolchain
+coverage.out
+coverage.html
+*.test
+*.cpuprofile
+*.heapprofile
+go.work
+go.work.sum
+
+_output
+
+# Environment
+.idea
+.vscode
+.DS_Store
+
+# Project Specific
+*.csv
+
+# Executable file
+bin
+
+# Others
+tmp
+
+qabot
