@@ -27,7 +27,8 @@ func main() {
 	apiUrl := flag.String("api-url", "https://api.deepseek.com/chat/completions", "大模型 API 服务的 url")
 	apiKey := flag.String("api-key", "", "API key")
 	model := flag.String("model", "deepseek-chat", "大语言模型")
-	prompt := flag.String("prompt", "你可能同时与多个用户（或者多个人格）聊天，你注意我说的每句话开头 [] 内的是不同的用户（人格）", "给大语言模型的提示词")
+	privatePrompt := flag.String("private-prompt", "", "私聊中给大语言模型的提示词")
+	groupPrompt := flag.String("group-prompt", "你可能同时与多个用户（或者多个人格）聊天，你注意我说的每句话开头 [] 内的是不同的用户（人格）", "群聊中给大语言模型的提示词")
 
 	flag.Parse()
 
@@ -36,7 +37,7 @@ func main() {
 	receivedMessageCh := make(chan messageinfo.MessageInfo, 100)
 	toSendMessageCh := make(chan messageinfo.MessageInfo, 100)
 
-	chatContext := chatcontext.NewChatContext(*prompt)
+	chatContext := chatcontext.NewChatContext(*privatePrompt, *groupPrompt)
 
 	c, err := chatter.NewChatter(receivedMessageCh, toSendMessageCh, *whitelist, &chatContext, *apiUrl, *apiKey, *model)
 	if err != nil {

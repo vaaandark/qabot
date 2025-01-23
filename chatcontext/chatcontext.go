@@ -1,18 +1,23 @@
 package chatcontext
 
-import "sync"
+import (
+	"strings"
+	"sync"
+)
 
 type ChatContext struct {
 	sync.Mutex
-	ContextMap map[string]*Messages
-	Prompt     string
+	ContextMap    map[string]*Messages
+	PrivatePrompt string
+	GroupPrompt   string
 }
 
-func NewChatContext(prompt string) ChatContext {
+func NewChatContext(privatePrompt, groupPrompt string) ChatContext {
 	return ChatContext{
-		Mutex:      sync.Mutex{},
-		ContextMap: make(map[string]*Messages),
-		Prompt:     prompt,
+		Mutex:         sync.Mutex{},
+		ContextMap:    make(map[string]*Messages),
+		PrivatePrompt: privatePrompt,
+		GroupPrompt:   groupPrompt,
 	}
 }
 
@@ -23,11 +28,20 @@ func (cc *ChatContext) GetContext(key string) *Messages {
 	context, exist := cc.ContextMap[key]
 	if !exist {
 		context = &Messages{}
-		if len(cc.Prompt) != 0 {
-			context.Data = append(context.Data, Message{
-				Role:    "system",
-				Content: cc.Prompt,
-			})
+		if strings.HasPrefix(key, "group") {
+			if len(cc.GroupPrompt) != 0 {
+				context.Data = append(context.Data, Message{
+					Role:    "system",
+					Content: cc.GroupPrompt,
+				})
+			}
+		} else if strings.HasSuffix(key, "user") {
+			if len(cc.PrivatePrompt) != 0 {
+				context.Data = append(context.Data, Message{
+					Role:    "system",
+					Content: cc.PrivatePrompt,
+				})
+			}
 		}
 		cc.ContextMap[key] = context
 	}
