@@ -46,21 +46,25 @@ func (ca *CmdAdaptor) cmdWhitelist(cmds []string) (string, error) {
 	case "show":
 		// do nothing
 	case "add":
-		if len(cmds) != 4 {
+		if len(cmds) < 4 {
 			return fmt.Sprintf("%s: wrong args", strings.Join(cmds[:2], " ")), nil
-		}
-		id, err := strconv.ParseInt(cmds[3], 10, 64)
-		if err != nil {
-			return fmt.Sprintf("%s: failed to parse id: %s", cmds[0], cmds[3]), nil
 		}
 		switch cmds[2] {
 		case "group":
-			if err := ca.WhitelistAdaptor.AddGroup(id); err != nil {
-				return fmt.Sprintf("%s: failed to add group id: %s", cmds[0], cmds[3]), nil
+			for _, idStr := range cmds[3:] {
+				id, err := strconv.ParseInt(idStr, 10, 64)
+				if err != nil {
+					continue
+				}
+				_ = ca.WhitelistAdaptor.AddGroup(id)
 			}
 		case "user":
-			if err := ca.WhitelistAdaptor.AddUser(id); err != nil {
-				return fmt.Sprintf("%s: failed to add user id: %s", cmds[0], cmds[3]), nil
+			for _, idStr := range cmds[3:] {
+				id, err := strconv.ParseInt(idStr, 10, 64)
+				if err != nil {
+					continue
+				}
+				_ = ca.WhitelistAdaptor.AddUser(id)
 			}
 		default:
 			return fmt.Sprintf("%s: wrong args", strings.Join(cmds[:3], " ")), nil
