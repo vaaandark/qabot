@@ -11,7 +11,6 @@ import (
 	"qabot/chatter/cmdadaptor"
 	"qabot/chatter/whitelistadaptor"
 	"qabot/messageinfo"
-	"strings"
 )
 
 type Chatter struct {
@@ -70,14 +69,6 @@ func (c Chatter) Run(stopCh <-chan struct{}) {
 	}
 }
 
-func contextKeyFromMessageInfo(m *messageinfo.MessageInfo) string {
-	if m.IsInGroup() {
-		return fmt.Sprintf("group:%d", *m.GroupId)
-	} else {
-		return fmt.Sprintf("user:%d", m.UserId)
-	}
-}
-
 func (c Chatter) doPost(messages []chatcontext.Message) (*chatcontext.Message, error) {
 	request := CompletionRequestFromContext(c.Model, messages)
 
@@ -112,7 +103,7 @@ func (c Chatter) doPost(messages []chatcontext.Message) (*chatcontext.Message, e
 	}
 
 	message := response.GetMessage()
-	return &message, nil
+	return message, nil
 }
 
 func (c Chatter) chatWithLlm(m messageinfo.MessageInfo) {
@@ -120,29 +111,49 @@ func (c Chatter) chatWithLlm(m messageinfo.MessageInfo) {
 		return
 	}
 
-	context := c.ChatContext.GetContext(contextKeyFromMessageInfo(&m))
-	context.AddUserMessage(fmt.Sprintf("[%s] %s", m.Nickname, m.Text))
+	if m.ReplyTo != nil {
+		// 回复的不是 bot 且没有 at bot 的情况，不关心！
+		if !c.ChatContext.IsBotReply(&m.UserId, m.GroupId, *m.ReplyTo) && !m.IsAt {
+			return
+		}
+	}
 
-	message, err := c.doPost(context.Data)
+	err := c.ChatContext.AddContextNode(&m.UserId, m.GroupId, m.MessageId, m.ReplyTo, chatcontext.Message{
+		Role:    "user",
+		Content: m.Text,
+	})
 	if err != nil {
-		context.Unlock()
+		log.Printf("Failed to add user context: %v", err)
+		return
+	}
+
+	messages, err := c.ChatContext.LoadContextMessages(&m.UserId, m.GroupId, m.MessageId)
+	if err != nil {
+		log.Printf("Failed to load context: %v", err)
+		return
+	}
+
+	message, err := c.doPost(messages)
+	if err != nil {
 		log.Printf("Failed to do post request: %v", err)
+		return
+	} else if message == nil {
+		log.Print("Empty message")
 		return
 	}
 
 	m.Text = message.Content
 	c.ToSendMessageCh <- m
-	context.AddAssistantMessage(message.Content)
 }
 
 func (c *Chatter) execCmd(m messageinfo.MessageInfo) {
-	output, _ := c.CmdAdaptor.Exec(m.UserId, strings.TrimPrefix(m.Text, "/"))
+	output := c.CmdAdaptor.Exec(m.UserId, m.Text)
 	m.Text = output
 	c.ToSendMessageCh <- m
 }
 
 func (c *Chatter) doChat(m messageinfo.MessageInfo) {
-	if m.IsCmd() {
+	if m.IsCmd {
 		c.execCmd(m)
 	} else {
 		c.chatWithLlm(m)

@@ -11,6 +11,8 @@ import (
 	"qabot/receiver"
 	"qabot/sender"
 	"strings"
+
+	"github.com/syndtr/goleveldb/leveldb"
 )
 
 func addHttpUrlPrefix(url string) string {
@@ -28,7 +30,8 @@ func main() {
 	apiKey := flag.String("api-key", "", "API key")
 	model := flag.String("model", "deepseek-chat", "大语言模型")
 	privatePrompt := flag.String("private-prompt", "", "私聊中给大语言模型的提示词")
-	groupPrompt := flag.String("group-prompt", "你可能同时与多个用户（或者多个人格）聊天，你注意我说的每句话开头 [] 内的是不同的用户（人格）", "群聊中给大语言模型的提示词")
+	groupPrompt := flag.String("group-prompt", "", "群聊中给大语言模型的提示词")
+	dbPath := flag.String("db", "context.db", "持久化存储上下文")
 
 	flag.Parse()
 
@@ -37,13 +40,19 @@ func main() {
 	receivedMessageCh := make(chan messageinfo.MessageInfo, 100)
 	toSendMessageCh := make(chan messageinfo.MessageInfo, 100)
 
-	chatContext := chatcontext.NewChatContext(*privatePrompt, *groupPrompt)
+	db, err := leveldb.OpenFile(*dbPath, nil)
+	if err != nil {
+		log.Panicf("Failed to open db: %v", err)
+	}
+	defer db.Close()
+
+	chatContext := chatcontext.NewChatContext(db, *privatePrompt, *groupPrompt)
 
 	c, err := chatter.NewChatter(receivedMessageCh, toSendMessageCh, *whitelist, &chatContext, *apiUrl, *apiKey, *model)
 	if err != nil {
 		log.Panicf("Failed to init chatter: %v", err)
 	}
-	s := sender.NewSender(toSendMessageCh, *endpoint)
+	s := sender.NewSender(toSendMessageCh, chatContext, *endpoint)
 
 	stopCh := nix.SetupSignalHandler()
 

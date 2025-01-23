@@ -20,8 +20,11 @@ type CompletionResponse struct {
 	Choices []Choice `json:"choices"`
 }
 
-func (cr CompletionResponse) GetMessage() chatcontext.Message {
-	return cr.Choices[0].Message
+func (cr CompletionResponse) GetMessage() *chatcontext.Message {
+	if len(cr.Choices) == 0 {
+		return nil
+	}
+	return &cr.Choices[0].Message
 }
 
 type Choice struct {

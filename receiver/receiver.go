@@ -38,9 +38,9 @@ func (receiver Receiver) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	log.Printf("%v", event)
 
-	if !event.IsFromSelf() && event.IsMessage() {
-		if text, shouldBeIgnored := event.ProcessText(); !shouldBeIgnored {
-			receiver.ReceivedMessageCh <- messageinfo.FromEvent(event, &text)
+	if event.IsMessage() {
+		if text, replyTo, shouldBeIgnored, isCmd, isAt := event.ProcessText(); !shouldBeIgnored {
+			receiver.ReceivedMessageCh <- messageinfo.FromEvent(event, &text, replyTo, isCmd, isAt)
 		}
 	}
 }
