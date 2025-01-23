@@ -5,8 +5,8 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"qabot/event"
 	"qabot/messageinfo"
+	"qabot/onebot"
 )
 
 type Receiver struct {
@@ -28,7 +28,7 @@ func (receiver Receiver) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	defer r.Body.Close()
 
-	event := event.Event{}
+	event := onebot.Event{}
 	err = json.Unmarshal(bodyBytes, &event)
 	if err != nil {
 		http.Error(w, "failed to unmarshal event", http.StatusInternalServerError)
@@ -38,7 +38,9 @@ func (receiver Receiver) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	log.Printf("%v", event)
 
-	if !event.IsFromSelf() && event.IsMessage() && !event.ShouldBeIgnore() {
-		receiver.ReceivedMessageCh <- messageinfo.FromEvent(event.TrimPrefix())
+	if !event.IsFromSelf() && event.IsMessage() {
+		if text, shouldBeIgnored := event.ProcessText(); !shouldBeIgnored {
+			receiver.ReceivedMessageCh <- messageinfo.FromEvent(event, &text)
+		}
 	}
 }

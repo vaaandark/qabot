@@ -1,6 +1,6 @@
 package messageinfo
 
-import "qabot/event"
+import "qabot/onebot"
 
 type MessageInfo struct {
 	Nickname  string
@@ -10,14 +10,18 @@ type MessageInfo struct {
 	MessageId int32
 }
 
-func FromEvent(event event.Event) MessageInfo {
-	return MessageInfo{
+func FromEvent(event onebot.Event, text *string) MessageInfo {
+	m := MessageInfo{
 		Nickname:  event.Sender.Nickname,
 		UserId:    event.UserId,
 		GroupId:   event.GroupId,
 		Text:      event.RawMessage,
 		MessageId: event.MessageId,
 	}
+	if text != nil {
+		m.Text = *text
+	}
+	return m
 }
 
 func (m MessageInfo) IsInGroup() bool {

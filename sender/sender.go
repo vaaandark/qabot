@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"qabot/messageinfo"
+	"qabot/onebot"
 	"strconv"
 )
 
@@ -72,12 +73,12 @@ func (s Sender) doSend(m messageinfo.MessageInfo) {
 	if m.IsInGroup() {
 		// at := strconv.FormatInt(m.UserId, 10)
 		replyTo := strconv.Itoa(int(m.MessageId))
-		groupMessage := NewGroupMessage(*m.GroupId, m.Text, nil, &replyTo)
+		groupMessage := onebot.NewGroupMessage(*m.GroupId, m.Text, nil, &replyTo)
 		if err := s.post("send_group_msg", groupMessage); err != nil {
 			log.Printf("Failed to send group message: group=%d, id=%d: %v", *m.GroupId, m.UserId, err)
 		}
 	} else {
-		privateMessage := NewPrivateMessage(m.UserId, m.Text)
+		privateMessage := onebot.NewPrivateMessage(m.UserId, m.Text)
 		if err := s.post("send_private_msg", privateMessage); err != nil {
 			log.Printf("Failed to send private message: id=%d: %v", m.UserId, err)
 		}
