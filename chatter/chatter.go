@@ -8,14 +8,17 @@ import (
 	"log"
 	"net/http"
 	"qabot/chatcontext"
+	"qabot/chatter/cmdadaptor"
 	"qabot/chatter/whitelistadaptor"
 	"qabot/messageinfo"
+	"strings"
 )
 
 type Chatter struct {
 	ReceivedMessageCh chan messageinfo.MessageInfo
 	ToSendMessageCh   chan messageinfo.MessageInfo
 	WhitelistAdaptor  whitelistadaptor.WhitelistAdaptor
+	CmdAdaptor        cmdadaptor.CmdAdaptor
 	ChatContext       *chatcontext.ChatContext
 	ApiUrl            string
 	ApiKey            string
@@ -28,10 +31,13 @@ func NewChatter(receiveMessageCh, toSendMessageCh chan messageinfo.MessageInfo, 
 		return nil, err
 	}
 
+	ca := cmdadaptor.NewCmdAdaptor(*wa)
+
 	return &Chatter{
 		ReceivedMessageCh: receiveMessageCh,
 		ToSendMessageCh:   toSendMessageCh,
 		WhitelistAdaptor:  *wa,
+		CmdAdaptor:        ca,
 		ChatContext:       chatContext,
 		ApiUrl:            apiUrl,
 		ApiKey:            apiKey,
@@ -109,25 +115,36 @@ func (c Chatter) doPost(messages []chatcontext.Message) (*chatcontext.Message, e
 	return &message, nil
 }
 
-func (c Chatter) doChat(m messageinfo.MessageInfo) {
-	if c.ChatContext != nil {
-		context := c.ChatContext.GetContext(contextKeyFromMessageInfo(&m))
-		context.AddUserMessage(m.Text)
+func (c Chatter) chatWithLlm(m messageinfo.MessageInfo) {
+	if c.ChatContext == nil {
+		return
+	}
 
-		message, err := c.doPost(context.Data)
-		if err != nil {
-			context.Unlock()
-			log.Printf("Failed to do post request: %v", err)
-			return
-		}
+	context := c.ChatContext.GetContext(contextKeyFromMessageInfo(&m))
+	context.AddUserMessage(m.Text)
 
-		m.Text = message.Content
-		c.ToSendMessageCh <- m
-		context.AddAssistantMessage(message.Content)
+	message, err := c.doPost(context.Data)
+	if err != nil {
+		context.Unlock()
+		log.Printf("Failed to do post request: %v", err)
+		return
+	}
+
+	m.Text = message.Content
+	c.ToSendMessageCh <- m
+	context.AddAssistantMessage(message.Content)
+}
+
+func (c *Chatter) execCmd(m messageinfo.MessageInfo) {
+	output, _ := c.CmdAdaptor.Exec(m.UserId, strings.TrimPrefix(m.Text, "/"))
+	m.Text = output
+	c.ToSendMessageCh <- m
+}
+
+func (c *Chatter) doChat(m messageinfo.MessageInfo) {
+	if m.IsCmd() {
+		c.execCmd(m)
 	} else {
-		messageText := m.Text
-		messageText = fmt.Sprintf("【复读】%s", messageText)
-		m.Text = messageText
-		c.ToSendMessageCh <- m
+		c.chatWithLlm(m)
 	}
 }

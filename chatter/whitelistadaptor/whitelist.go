@@ -45,6 +45,25 @@ func NewWhitelistAdaptor(filePath string) (*WhitelistAdaptor, error) {
 	return wa, nil
 }
 
+func (wa *WhitelistAdaptor) AddUser(userId int64) error {
+	wa.whitelist.addUser(userId)
+	return wa.DumpFile()
+}
+
+func (wa *WhitelistAdaptor) AddGroup(groupId int64) error {
+	wa.whitelist.addGroup(groupId)
+	return wa.DumpFile()
+}
+
+func (wa WhitelistAdaptor) Show() (*string, error) {
+	b, err := json.Marshal(wa.whitelist)
+	if err != nil {
+		return nil, err
+	}
+	s := string(b)
+	return &s, nil
+}
+
 func (wa *WhitelistAdaptor) DumpFile() error {
 	if err := wa.whitelist.DumpFile(wa.FilePath); err != nil {
 		return err
@@ -98,9 +117,14 @@ func (wa *WhitelistAdaptor) HasUser(userId int64) bool {
 	return wa.whitelist.hasUser(userId)
 }
 
+func (wa WhitelistAdaptor) IsAdmin(userId int64) bool {
+	return wa.whitelist.isAdmin(userId)
+}
+
 type whitelist struct {
 	UserIds  []int64 `json:"user_ids"`
 	GroupIds []int64 `json:"group_ids"`
+	Admin    *int64  `json:"admin,omitempty"`
 }
 
 func (w whitelist) DumpFile(path string) error {
@@ -142,4 +166,16 @@ func (w whitelist) hasGroup(groupId int64) bool {
 		}
 	}
 	return false
+}
+
+func (w *whitelist) addUser(userId int64) {
+	w.UserIds = append(w.UserIds, userId)
+}
+
+func (w *whitelist) addGroup(groupId int64) {
+	w.GroupIds = append(w.GroupIds, groupId)
+}
+
+func (w whitelist) isAdmin(userId int64) bool {
+	return w.Admin != nil && *w.Admin == userId
 }

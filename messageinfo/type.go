@@ -1,6 +1,9 @@
 package messageinfo
 
-import "qabot/onebot"
+import (
+	"qabot/onebot"
+	"strings"
+)
 
 type MessageInfo struct {
 	Nickname  string
@@ -19,9 +22,13 @@ func FromEvent(event onebot.Event, text *string) MessageInfo {
 		MessageId: event.MessageId,
 	}
 	if text != nil {
-		m.Text = *text
+		m.Text = strings.TrimSpace(*text)
 	}
 	return m
+}
+
+func (m MessageInfo) IsCmd() bool {
+	return strings.HasPrefix(m.Text, "/")
 }
 
 func (m MessageInfo) IsInGroup() bool {

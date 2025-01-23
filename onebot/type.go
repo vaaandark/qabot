@@ -48,9 +48,13 @@ func (e Event) ProcessText() (text string, shouldBeIgnored bool) {
 		}
 	}
 
-	if shouldBeIgnored && strings.HasPrefix(text, "v ") {
-		shouldBeIgnored = false
-		text = strings.TrimPrefix(text, "v ")
+	if shouldBeIgnored {
+		if strings.HasPrefix(text, "v ") {
+			shouldBeIgnored = false
+			text = strings.TrimPrefix(text, "v ")
+		} else if strings.HasPrefix(text, "/") { // cmd
+			shouldBeIgnored = false
+		}
 	}
 	return
 }
