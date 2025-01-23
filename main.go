@@ -27,7 +27,7 @@ func main() {
 	apiUrl := flag.String("api-url", "https://api.deepseek.com/chat/completions", "大模型 API 服务的 url")
 	apiKey := flag.String("api-key", "", "API key")
 	model := flag.String("model", "deepseek-chat", "大语言模型")
-	prompt := flag.String("prompt", "", "给大语言模型的提示词")
+	prompt := flag.String("prompt", "你可能同时与多个用户（或者多个人格）聊天，你注意我说的每句话开头 [] 内的是不同的用户（人格）", "给大语言模型的提示词")
 
 	flag.Parse()
 

@@ -121,7 +121,7 @@ func (c Chatter) chatWithLlm(m messageinfo.MessageInfo) {
 	}
 
 	context := c.ChatContext.GetContext(contextKeyFromMessageInfo(&m))
-	context.AddUserMessage(m.Text)
+	context.AddUserMessage(fmt.Sprintf("[%s] %s", m.Nickname, m.Text))
 
 	message, err := c.doPost(context.Data)
 	if err != nil {
