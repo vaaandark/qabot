@@ -46,16 +46,26 @@ func NewWhitelistAdaptor(filePath string) (*WhitelistAdaptor, error) {
 }
 
 func (wa *WhitelistAdaptor) AddUser(userId int64) error {
+	if wa.IsModified() {
+		wa.LoadFile()
+	}
 	wa.whitelist.addUser(userId)
 	return wa.DumpFile()
 }
 
 func (wa *WhitelistAdaptor) AddGroup(groupId int64) error {
+	if wa.IsModified() {
+		wa.LoadFile()
+	}
 	wa.whitelist.addGroup(groupId)
 	return wa.DumpFile()
 }
 
 func (wa WhitelistAdaptor) Show() (*string, error) {
+	if wa.IsModified() {
+		wa.LoadFile()
+	}
+
 	b, err := json.Marshal(wa.whitelist)
 	if err != nil {
 		return nil, err
