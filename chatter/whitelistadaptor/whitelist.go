@@ -47,6 +47,7 @@ func NewWhitelistAdaptor(filePath string) (*WhitelistAdaptor, error) {
 
 func (wa *WhitelistAdaptor) AddUser(userId int64) error {
 	if wa.IsModified() {
+		log.Printf("Whitelist file %s has been modified", wa.FilePath)
 		if err := wa.LoadFile(); err != nil {
 			return err
 		}
@@ -57,6 +58,7 @@ func (wa *WhitelistAdaptor) AddUser(userId int64) error {
 
 func (wa *WhitelistAdaptor) AddGroup(groupId int64) error {
 	if wa.IsModified() {
+		log.Printf("Whitelist file %s has been modified", wa.FilePath)
 		if err := wa.LoadFile(); err != nil {
 			return err
 		}
@@ -67,6 +69,7 @@ func (wa *WhitelistAdaptor) AddGroup(groupId int64) error {
 
 func (wa WhitelistAdaptor) Show() (*string, error) {
 	if wa.IsModified() {
+		log.Printf("Whitelist file %s has been modified", wa.FilePath)
 		if err := wa.LoadFile(); err != nil {
 			return nil, err
 		}
@@ -113,7 +116,7 @@ func (wa *WhitelistAdaptor) LoadFile() error {
 
 func (wa *WhitelistAdaptor) HasGroup(groupId int64) bool {
 	if wa.IsModified() {
-		log.Print("Whitelist file has been modified")
+		log.Printf("Whitelist file %s has been modified", wa.FilePath)
 		if err := wa.LoadFile(); err != nil {
 			log.Printf("Failed to load file: %v", err)
 			return false
@@ -124,7 +127,7 @@ func (wa *WhitelistAdaptor) HasGroup(groupId int64) bool {
 
 func (wa *WhitelistAdaptor) HasUser(userId int64) bool {
 	if wa.IsModified() {
-		log.Print("Whitelist file has been modified")
+		log.Printf("Whitelist file %s has been modified", wa.FilePath)
 		if err := wa.LoadFile(); err != nil {
 			log.Printf("Failed to load file: %v", err)
 			return false

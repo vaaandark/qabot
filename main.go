@@ -34,6 +34,7 @@ func main() {
 	dbPath := flag.String("db", "context.db", "持久化存储上下文")
 
 	flag.Parse()
+	log.Printf("Whitelist path: %s", *whitelist)
 
 	*endpoint = addHttpUrlPrefix(*endpoint)
 
