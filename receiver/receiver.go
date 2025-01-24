@@ -36,10 +36,9 @@ func (receiver Receiver) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Printf("%v", event)
-
 	if event.IsMessage() {
 		if text, replyTo, shouldBeIgnored, isCmd, isAt := event.ProcessText(); !shouldBeIgnored {
+			log.Printf("Receive event: %v", event)
 			receiver.ReceivedMessageCh <- messageinfo.FromEvent(event, &text, replyTo, isCmd, isAt)
 		}
 	}

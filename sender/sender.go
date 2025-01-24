@@ -68,7 +68,6 @@ func (s Sender) post(path string, body interface{}) (int32, error) {
 	if err != nil {
 		return 0, err
 	}
-	fmt.Printf("reponse:%s\n", string(b))
 
 	response := onebot.SendResponse{}
 	if err := json.Unmarshal(b, &response); err != nil {
