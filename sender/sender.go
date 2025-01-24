@@ -94,15 +94,20 @@ func (s Sender) doSend(m messageinfo.MessageInfo) {
 		groupMessage := onebot.NewGroupMessage(*m.GroupId, m.Text, nil, &replyTo)
 		if messageId, err = s.doPost("send_group_msg", groupMessage); err != nil {
 			log.Printf("Failed to send group message: group=%d, id=%d: %v", *m.GroupId, m.UserId, err)
+			return
 		}
 	} else {
 		privateMessage := onebot.NewPrivateMessage(m.UserId, m.Text)
 		if messageId, err = s.doPost("send_private_msg", privateMessage); err != nil {
 			log.Printf("Failed to send private message: id=%d: %v", m.UserId, err)
+			return
 		}
 	}
 
-	if err := s.recordSent(messageId, m); err != nil {
-		log.Printf("Failed to add user context: %v", err)
+	// 不是命令回复才存档
+	if !m.IsCmd {
+		if err := s.recordSent(messageId, m); err != nil {
+			log.Printf("Failed to add user context: %v", err)
+		}
 	}
 }
