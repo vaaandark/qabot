@@ -41,7 +41,7 @@ func (s Sender) Run(stopCh <-chan struct{}) {
 	}
 }
 
-func (s Sender) post(path string, body interface{}) (int32, error) {
+func (s Sender) doPost(path string, body interface{}) (int32, error) {
 	url := fmt.Sprintf("%s/%s", s.Endpoint, path)
 
 	b, err := json.Marshal(body)
@@ -92,12 +92,12 @@ func (s Sender) doSend(m messageinfo.MessageInfo) {
 		// at := strconv.FormatInt(m.UserId, 10)
 		replyTo := strconv.Itoa(int(m.MessageId))
 		groupMessage := onebot.NewGroupMessage(*m.GroupId, m.Text, nil, &replyTo)
-		if messageId, err = s.post("send_group_msg", groupMessage); err != nil {
+		if messageId, err = s.doPost("send_group_msg", groupMessage); err != nil {
 			log.Printf("Failed to send group message: group=%d, id=%d: %v", *m.GroupId, m.UserId, err)
 		}
 	} else {
 		privateMessage := onebot.NewPrivateMessage(m.UserId, m.Text)
-		if messageId, err = s.post("send_private_msg", privateMessage); err != nil {
+		if messageId, err = s.doPost("send_private_msg", privateMessage); err != nil {
 			log.Printf("Failed to send private message: id=%d: %v", m.UserId, err)
 		}
 	}
