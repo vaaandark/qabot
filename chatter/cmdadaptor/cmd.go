@@ -22,11 +22,11 @@ func (ca CmdAdaptor) IsAdmin(userId int64) bool {
 	return ca.WhitelistAdaptor.IsAdmin(userId)
 }
 
-func (ca CmdAdaptor) cmdCheckHealth(_ []string) (string, error) {
+func (ca CmdAdaptor) cmdCheckHealth(_ int64, _ []string) (string, error) {
 	return "1", nil
 }
 
-func (ca CmdAdaptor) cmdHelp(_ []string) (string, error) {
+func (ca CmdAdaptor) cmdHelp(_ int64, _ []string) (string, error) {
 	return "qabot 使用方式：\n\n" +
 		"  - 新建上下文：\n" +
 		"      - 群聊中：@bot 发送消息且该消息不是一条回复；\n" +
@@ -41,18 +41,28 @@ func (ca CmdAdaptor) cmdHelp(_ []string) (string, error) {
 		"  2. 可以忽略不想要的上文", nil
 }
 
-func (ca *CmdAdaptor) cmdWhitelist(cmds []string) (string, error) {
+func (ca *CmdAdaptor) cmdWhitelist(userId int64, cmds []string) (string, error) {
+	if !ca.IsAdmin(userId) {
+		return fmt.Sprintf("You(%d) are not administrator.", userId), nil
+	}
+
 	if len(cmds) < 2 {
 		return fmt.Sprintf("%s: wrong args", cmds[0]), nil
 	}
 
 	switch cmds[1] {
 	case "show":
-		// do nothing
+		output, err := ca.WhitelistAdaptor.Show()
+		if err != nil {
+			return fmt.Sprintf("%s: failed to check whitelist: %v", cmds[0], err), err
+		}
+		return *output, nil
 	case "add":
 		if len(cmds) < 4 {
 			return fmt.Sprintf("%s: wrong args", strings.Join(cmds[:2], " ")), nil
 		}
+
+		addedIds := []string{}
 		switch cmds[2] {
 		case "group":
 			for _, idStr := range cmds[3:] {
@@ -60,7 +70,9 @@ func (ca *CmdAdaptor) cmdWhitelist(cmds []string) (string, error) {
 				if err != nil {
 					continue
 				}
-				_ = ca.WhitelistAdaptor.AddGroup(id)
+				if err := ca.WhitelistAdaptor.AddGroup(id); err == nil {
+					addedIds = append(addedIds, strconv.FormatInt(id, 10))
+				}
 			}
 		case "user":
 			for _, idStr := range cmds[3:] {
@@ -68,29 +80,20 @@ func (ca *CmdAdaptor) cmdWhitelist(cmds []string) (string, error) {
 				if err != nil {
 					continue
 				}
-				_ = ca.WhitelistAdaptor.AddUser(id)
+				if err := ca.WhitelistAdaptor.AddUser(id); err == nil {
+					addedIds = append(addedIds, strconv.FormatInt(id, 10))
+				}
 			}
 		default:
 			return fmt.Sprintf("%s: wrong args", strings.Join(cmds[:3], " ")), nil
 		}
+		return fmt.Sprintf("Successfully added %s", strings.Join(addedIds, ", ")), nil
 	default:
 		return fmt.Sprintf("%s: unknown subcommand: %s", cmds[0], cmds[1]), nil
 	}
-
-	output, err := ca.WhitelistAdaptor.Show()
-	if err != nil {
-		return fmt.Sprintf("%s: failed to check whitelist: %v", cmds[0], err), err
-	}
-
-	return *output, nil
 }
 
 func (ca *CmdAdaptor) Exec(userId int64, text string) (output string) {
-	if !ca.IsAdmin(userId) {
-		output = fmt.Sprintf("You(%d) are not administrator.", userId)
-		return
-	}
-
 	cmds := strings.Split(text, " ")
 	if len(cmds) == 0 {
 		output = "Empty cmd"
@@ -99,15 +102,15 @@ func (ca *CmdAdaptor) Exec(userId int64, text string) (output string) {
 
 	switch cmds[0] {
 	case "wl", "whitelist":
-		cmdOutput, err := ca.cmdWhitelist(cmds)
+		cmdOutput, err := ca.cmdWhitelist(userId, cmds)
 		if err != nil {
 			log.Printf("Failed to exec whitelist: %v", err)
 		}
 		output = cmdOutput
 	case "h", "help":
-		output, _ = ca.cmdHelp(cmds)
+		output, _ = ca.cmdHelp(userId, cmds)
 	case "ch", "check-health":
-		output, _ = ca.cmdCheckHealth(cmds)
+		output, _ = ca.cmdCheckHealth(userId, cmds)
 	default:
 		output = "Unknown cmd"
 	}
