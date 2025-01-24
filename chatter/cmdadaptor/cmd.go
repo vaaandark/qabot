@@ -22,6 +22,10 @@ func (ca CmdAdaptor) IsAdmin(userId int64) bool {
 	return ca.WhitelistAdaptor.IsAdmin(userId)
 }
 
+func (ca CmdAdaptor) cmdCheckHealth(_ []string) (string, error) {
+	return "1", nil
+}
+
 func (ca CmdAdaptor) cmdHelp(_ []string) (string, error) {
 	return "qabot 使用方式：\n\n" +
 		"  - 新建上下文：\n" +
@@ -102,6 +106,8 @@ func (ca *CmdAdaptor) Exec(userId int64, text string) (output string) {
 		output = cmdOutput
 	case "h", "help":
 		output, _ = ca.cmdHelp(cmds)
+	case "ch", "check-health":
+		output, _ = ca.cmdCheckHealth(cmds)
 	default:
 		output = "Unknown cmd"
 	}
