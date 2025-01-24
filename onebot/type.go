@@ -135,17 +135,28 @@ type GroupMessage struct {
 	Message []TypedMessage `json:"message"`
 }
 
-func NewPrivateMessage(userId int64, messageText string) PrivateMessage {
-	return PrivateMessage{
-		UserId: userId,
-		Message: []TypedMessage{
-			{
-				Type: "text",
-				Data: Data{
-					Text: messageText,
-				},
+func NewPrivateMessage(userId int64, messageText string, replyTo *string) PrivateMessage {
+	message := []TypedMessage{}
+
+	if replyTo != nil {
+		message = append(message, TypedMessage{
+			Type: "reply",
+			Data: Data{
+				Id: *replyTo,
 			},
+		})
+	}
+
+	message = append(message, TypedMessage{
+		Type: "text",
+		Data: Data{
+			Text: messageText,
 		},
+	})
+
+	return PrivateMessage{
+		UserId:  userId,
+		Message: message,
 	}
 }
 
