@@ -8,18 +8,18 @@ import (
 	"log"
 	"net/http"
 	"qabot/chatcontext"
-	"qabot/messageinfo"
+	"qabot/messageenvelope"
 	"qabot/onebot"
 	"strconv"
 )
 
 type Sender struct {
-	ToSendMessageCh chan messageinfo.MessageInfo
+	ToSendMessageCh chan messageenvelope.MessageEnvelope
 	ChatContext     chatcontext.ChatContext
 	Endpoint        string
 }
 
-func NewSender(toSendMessageCh chan messageinfo.MessageInfo, chatContext chatcontext.ChatContext, endpoint string) Sender {
+func NewSender(toSendMessageCh chan messageenvelope.MessageEnvelope, chatContext chatcontext.ChatContext, endpoint string) Sender {
 	return Sender{
 		ToSendMessageCh: toSendMessageCh,
 		ChatContext:     chatContext,
@@ -77,14 +77,14 @@ func (s Sender) doPost(path string, body interface{}) (int32, error) {
 	return response.Data.MessageId, nil
 }
 
-func (s Sender) recordSent(messageId int32, m messageinfo.MessageInfo) error {
+func (s Sender) recordSent(messageId int32, m messageenvelope.MessageEnvelope) error {
 	return s.ChatContext.AddContextNode(m.TargetId, m.GroupId, messageId, &m.MessageId, chatcontext.Message{
 		Role:    "assistant",
 		Content: m.Text,
 	})
 }
 
-func (s Sender) doSend(m messageinfo.MessageInfo) {
+func (s Sender) doSend(m messageenvelope.MessageEnvelope) {
 	var messageId int32
 	var err error
 

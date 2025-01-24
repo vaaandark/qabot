@@ -5,15 +5,15 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"qabot/messageinfo"
+	"qabot/messageenvelope"
 	"qabot/onebot"
 )
 
 type Receiver struct {
-	ReceivedMessageCh chan messageinfo.MessageInfo
+	ReceivedMessageCh chan messageenvelope.MessageEnvelope
 }
 
-func NewReceiver(receivedMessageCh chan messageinfo.MessageInfo) Receiver {
+func NewReceiver(receivedMessageCh chan messageenvelope.MessageEnvelope) Receiver {
 	return Receiver{
 		ReceivedMessageCh: receivedMessageCh,
 	}
@@ -39,7 +39,7 @@ func (receiver Receiver) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if event.IsMessage() {
 		if text, replyTo, shouldBeIgnored, isCmd, isAt := event.ProcessText(); !shouldBeIgnored {
 			log.Printf("Receive event: %v", event)
-			receiver.ReceivedMessageCh <- messageinfo.FromEvent(event, &text, replyTo, isCmd, isAt)
+			receiver.ReceivedMessageCh <- messageenvelope.FromEvent(event, &text, replyTo, isCmd, isAt)
 		}
 	}
 }

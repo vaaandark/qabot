@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"qabot/chatcontext"
 	"qabot/chatter"
-	"qabot/messageinfo"
+	"qabot/messageenvelope"
 	"qabot/nix"
 	"qabot/receiver"
 	"qabot/sender"
@@ -37,8 +37,8 @@ func main() {
 
 	*endpoint = addHttpUrlPrefix(*endpoint)
 
-	receivedMessageCh := make(chan messageinfo.MessageInfo, 100)
-	toSendMessageCh := make(chan messageinfo.MessageInfo, 100)
+	receivedMessageCh := make(chan messageenvelope.MessageEnvelope, 100)
+	toSendMessageCh := make(chan messageenvelope.MessageEnvelope, 100)
 
 	db, err := leveldb.OpenFile(*dbPath, nil)
 	if err != nil {

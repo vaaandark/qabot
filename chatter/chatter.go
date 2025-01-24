@@ -10,12 +10,12 @@ import (
 	"qabot/chatcontext"
 	"qabot/chatter/cmdadaptor"
 	"qabot/chatter/whitelistadaptor"
-	"qabot/messageinfo"
+	"qabot/messageenvelope"
 )
 
 type Chatter struct {
-	ReceivedMessageCh chan messageinfo.MessageInfo
-	ToSendMessageCh   chan messageinfo.MessageInfo
+	ReceivedMessageCh chan messageenvelope.MessageEnvelope
+	ToSendMessageCh   chan messageenvelope.MessageEnvelope
 	WhitelistAdaptor  whitelistadaptor.WhitelistAdaptor
 	CmdAdaptor        cmdadaptor.CmdAdaptor
 	ChatContext       *chatcontext.ChatContext
@@ -24,7 +24,7 @@ type Chatter struct {
 	Model             string
 }
 
-func NewChatter(receiveMessageCh, toSendMessageCh chan messageinfo.MessageInfo, whitelistFilePath string, chatContext *chatcontext.ChatContext, apiUrl, apiKey, model string) (*Chatter, error) {
+func NewChatter(receiveMessageCh, toSendMessageCh chan messageenvelope.MessageEnvelope, whitelistFilePath string, chatContext *chatcontext.ChatContext, apiUrl, apiKey, model string) (*Chatter, error) {
 	wa, err := whitelistadaptor.NewWhitelistAdaptor(whitelistFilePath)
 	if err != nil {
 		return nil, err
@@ -106,7 +106,7 @@ func (c Chatter) doPost(messages []chatcontext.Message) (*chatcontext.Message, e
 	return message, nil
 }
 
-func (c Chatter) chatWithLlm(m messageinfo.MessageInfo) {
+func (c Chatter) chatWithLlm(m messageenvelope.MessageEnvelope) {
 	if c.ChatContext == nil {
 		return
 	}
@@ -146,13 +146,13 @@ func (c Chatter) chatWithLlm(m messageinfo.MessageInfo) {
 	c.ToSendMessageCh <- m
 }
 
-func (c *Chatter) execCmd(m messageinfo.MessageInfo) {
+func (c *Chatter) execCmd(m messageenvelope.MessageEnvelope) {
 	output := c.CmdAdaptor.Exec(m.UserId, m.Text)
 	m.Text = output
 	c.ToSendMessageCh <- m
 }
 
-func (c *Chatter) doChat(m messageinfo.MessageInfo) {
+func (c *Chatter) doChat(m messageenvelope.MessageEnvelope) {
 	if m.IsCmd {
 		c.execCmd(m)
 	} else {

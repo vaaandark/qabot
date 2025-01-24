@@ -1,11 +1,11 @@
-package messageinfo
+package messageenvelope
 
 import (
 	"qabot/onebot"
 	"strings"
 )
 
-type MessageInfo struct {
+type MessageEnvelope struct {
 	Nickname   string
 	UserId     int64
 	TargetId   *int64
@@ -18,8 +18,8 @@ type MessageInfo struct {
 	IsAt       bool
 }
 
-func FromEvent(event onebot.Event, text *string, replyTo *int32, isCmd, isAt bool) MessageInfo {
-	m := MessageInfo{
+func FromEvent(event onebot.Event, text *string, replyTo *int32, isCmd, isAt bool) MessageEnvelope {
+	m := MessageEnvelope{
 		Nickname:   event.Sender.Nickname,
 		UserId:     event.UserId,
 		TargetId:   event.TargetId,
@@ -37,6 +37,6 @@ func FromEvent(event onebot.Event, text *string, replyTo *int32, isCmd, isAt boo
 	return m
 }
 
-func (m MessageInfo) IsInGroup() bool {
+func (m MessageEnvelope) IsInGroup() bool {
 	return m.GroupId != nil
 }
