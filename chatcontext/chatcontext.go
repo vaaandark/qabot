@@ -3,6 +3,7 @@ package chatcontext
 import (
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/syndtr/goleveldb/leveldb"
 )
@@ -19,14 +20,16 @@ type ContextNodeKey struct {
 }
 
 type ContextNodeValue struct {
-	ReplyTo *int32  `json:"reply_to,omitempty"`
-	Message Message `json:"message"`
+	ReplyTo   *int32    `json:"reply_to,omitempty"`
+	Message   Message   `json:"message"`
+	Timestamp time.Time `json:"timestamp,omitempty"`
 }
 
-func NewContextNodeValue(replyTo *int32, message Message) ContextNodeValue {
+func NewContextNodeValue(replyTo *int32, message Message, timestamp time.Time) ContextNodeValue {
 	return ContextNodeValue{
-		ReplyTo: replyTo,
-		Message: message,
+		ReplyTo:   replyTo,
+		Message:   message,
+		Timestamp: timestamp,
 	}
 }
 
@@ -78,9 +81,9 @@ func (cc ChatContext) IsBotReply(userId, groupId *int64, messageId int32) bool {
 	return val.Message.Role == "assistant"
 }
 
-func (cc ChatContext) AddContextNode(userId, groupId *int64, messageId int32, replyTo *int32, message Message) error {
+func (cc ChatContext) AddContextNode(userId, groupId *int64, messageId int32, replyTo *int32, message Message, timestamp time.Time) error {
 	key := NewContextNodeKey(userId, groupId, messageId).Key()
-	val, err := NewContextNodeValue(replyTo, message).Value()
+	val, err := NewContextNodeValue(replyTo, message, timestamp).Value()
 	if err != nil {
 		return err
 	}

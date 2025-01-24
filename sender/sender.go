@@ -11,6 +11,7 @@ import (
 	"qabot/messageenvelope"
 	"qabot/onebot"
 	"strconv"
+	"time"
 )
 
 type Sender struct {
@@ -48,7 +49,6 @@ func (s Sender) doPost(path string, body interface{}) (int32, error) {
 	if err != nil {
 		return 0, err
 	}
-	log.Printf("Send message: %s", string(b))
 
 	client := &http.Client{}
 	req, err := http.NewRequest("POST", url, bytes.NewReader(b))
@@ -81,7 +81,7 @@ func (s Sender) recordSent(messageId int32, m messageenvelope.MessageEnvelope) e
 	return s.ChatContext.AddContextNode(m.TargetId, m.GroupId, messageId, &m.MessageId, chatcontext.Message{
 		Role:    "assistant",
 		Content: m.Text,
-	})
+	}, m.Timestamp)
 }
 
 func (s Sender) doSend(m messageenvelope.MessageEnvelope) {
@@ -89,7 +89,6 @@ func (s Sender) doSend(m messageenvelope.MessageEnvelope) {
 	var err error
 
 	if m.IsInGroup() {
-		// at := strconv.FormatInt(m.UserId, 10)
 		replyTo := strconv.Itoa(int(m.MessageId))
 		groupMessage := onebot.NewGroupMessage(*m.GroupId, m.Text, nil, &replyTo)
 		if messageId, err = s.doPost("send_group_msg", groupMessage); err != nil {
@@ -103,6 +102,10 @@ func (s Sender) doSend(m messageenvelope.MessageEnvelope) {
 			return
 		}
 	}
+
+	timestamp := time.Now()
+	log.Printf("Cost %s to send message: %s", timestamp.Sub(m.Timestamp), string(m.Text))
+	m.Timestamp = timestamp
 
 	// 不是命令回复才存档
 	if !m.IsCmd {

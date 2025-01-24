@@ -3,6 +3,7 @@ package messageenvelope
 import (
 	"qabot/onebot"
 	"strings"
+	"time"
 )
 
 type MessageEnvelope struct {
@@ -16,6 +17,7 @@ type MessageEnvelope struct {
 	IsFromSelf bool
 	IsCmd      bool
 	IsAt       bool
+	Timestamp  time.Time
 }
 
 func FromEvent(event onebot.Event, text *string, replyTo *int32, isCmd, isAt bool) MessageEnvelope {
@@ -30,6 +32,7 @@ func FromEvent(event onebot.Event, text *string, replyTo *int32, isCmd, isAt boo
 		IsFromSelf: event.IsFromSelf(),
 		IsCmd:      isCmd,
 		IsAt:       isAt,
+		Timestamp:  time.Now(),
 	}
 	if text != nil {
 		m.Text = strings.TrimSpace(*text)

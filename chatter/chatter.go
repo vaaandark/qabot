@@ -121,7 +121,7 @@ func (c Chatter) chatWithLlm(m messageenvelope.MessageEnvelope) {
 	err := c.ChatContext.AddContextNode(&m.UserId, m.GroupId, m.MessageId, m.ReplyTo, chatcontext.Message{
 		Role:    "user",
 		Content: m.Text,
-	})
+	}, m.Timestamp)
 	if err != nil {
 		log.Printf("Failed to add user context: %v", err)
 		return
