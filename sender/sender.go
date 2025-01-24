@@ -104,7 +104,7 @@ func (s Sender) doSend(m messageenvelope.MessageEnvelope) {
 	}
 
 	timestamp := time.Now()
-	log.Printf("Cost %s to send message: %s", timestamp.Sub(m.Timestamp), string(m.Text))
+	log.Printf("Cost %s to send message to %d: %s", timestamp.Sub(m.Timestamp), m.GetGroupOrUserID(), m.Text)
 	m.Timestamp = timestamp
 
 	// 不是命令回复才存档

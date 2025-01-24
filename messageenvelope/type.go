@@ -20,6 +20,13 @@ type MessageEnvelope struct {
 	Timestamp  time.Time
 }
 
+func (m MessageEnvelope) GetGroupOrUserID() int64 {
+	if m.GroupId != nil {
+		return *m.GroupId
+	}
+	return m.UserId
+}
+
 func FromEvent(event onebot.Event, text *string, replyTo *int32, isCmd, isAt bool) MessageEnvelope {
 	m := MessageEnvelope{
 		Nickname:   event.Sender.Nickname,
