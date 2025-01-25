@@ -7,12 +7,13 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"qabot/chatcontext"
-	"qabot/messageenvelope"
-	"qabot/onebot"
-	"qabot/util"
 	"strconv"
 	"time"
+
+	"github.com/vaaandark/qabot/pkg/chatcontext"
+	"github.com/vaaandark/qabot/pkg/messageenvelope"
+	"github.com/vaaandark/qabot/pkg/onebot"
+	"github.com/vaaandark/qabot/pkg/util"
 )
 
 type Sender struct {

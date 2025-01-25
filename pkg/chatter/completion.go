@@ -1,6 +1,6 @@
 package chatter
 
-import "qabot/chatcontext"
+import "github.com/vaaandark/qabot/pkg/chatcontext"
 
 type CompletionRequest struct {
 	Model    string                `json:"model"`

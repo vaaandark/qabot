@@ -1,19 +1,21 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"log"
 	"net/http"
 	"os"
-	"qabot/chatcontext"
-	"qabot/chatter"
-	"qabot/messageenvelope"
-	"qabot/receiver"
-	"qabot/sender"
-	"qabot/util"
 	"strings"
 
-	_ "net/http/pprof"
+	"github.com/vaaandark/qabot/pkg/chatcontext"
+	"github.com/vaaandark/qabot/pkg/chatter"
+	"github.com/vaaandark/qabot/pkg/dialog"
+	"github.com/vaaandark/qabot/pkg/messageenvelope"
+	"github.com/vaaandark/qabot/pkg/receiver"
+	"github.com/vaaandark/qabot/pkg/sender"
+	"github.com/vaaandark/qabot/pkg/util"
+	"golang.org/x/sync/errgroup"
 
 	"github.com/syndtr/goleveldb/leveldb"
 )
@@ -35,7 +37,10 @@ func main() {
 	privatePrompt := flag.String("private-prompt", "", "私聊中给大语言模型的提示词")
 	groupPrompt := flag.String("group-prompt", "", "群聊中给大语言模型的提示词")
 	dbPath := flag.String("db", "context.db", "持久化存储上下文")
-	userPprof := flag.Bool("pprof", false, "使用 pprof 性能分析")
+	dialogEndpoint := flag.String("dialog-endpoint", "127.0.0.1:6060", "查看对话历史记录的地址")
+	dialogAuthUser := flag.String("dialog-auth-user", "admin", "查看对话历史记录认证时的用户名")
+	dialogAuthPassword := flag.String("dialog-auth-password", "admin", "查看对话历史记录认证时的密码")
+	dialogFuzzId := flag.Bool("dialog-fuzz-id", true, "查看对话历史记录时隐藏对话的群 ID 或用户 ID")
 
 	log.Printf("Command line args: %s", strings.Join(os.Args, ", "))
 	flag.Parse()
@@ -66,16 +71,22 @@ func main() {
 	go c.Run(stopCh)
 	go s.Run(stopCh)
 
-	if *userPprof {
-		go func() {
-			log.Println("Pprof is now listening :6060")
-			if err := http.ListenAndServe(":6060", nil); err != nil {
-				log.Fatalf("Failed to start pprof: %v", err)
-			}
-		}()
+	g, _ := errgroup.WithContext(context.Background())
+
+	g.Go(func() error {
+		log.Printf("Event listening service starting on %s", *eventEndpoint)
+		return http.ListenAndServe(*eventEndpoint, receiver.NewReceiver(receivedMessageCh))
+	})
+
+	g.Go(func() error {
+		log.Printf("Dialog service starting on %s", *dialogEndpoint)
+		return http.ListenAndServe(*dialogEndpoint,
+			dialog.RateLimiter(
+				dialog.BasicAuth(*dialogAuthUser, *dialogAuthPassword,
+					dialog.NewDialogHtmlBuilder(chatContext, *dialogFuzzId))))
+	})
+
+	if err := g.Wait(); err != nil {
+		log.Fatalf("Service error: %v", err)
 	}
-
-	handler := receiver.NewReceiver(receivedMessageCh)
-
-	log.Fatal(http.ListenAndServe(*eventEndpoint, handler))
 }

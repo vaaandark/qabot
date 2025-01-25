@@ -7,10 +7,11 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"qabot/chatcontext"
-	"qabot/chatter/cmd"
-	"qabot/chatter/whitelist"
-	"qabot/messageenvelope"
+
+	"github.com/vaaandark/qabot/pkg/chatcontext"
+	"github.com/vaaandark/qabot/pkg/chatter/cmd"
+	"github.com/vaaandark/qabot/pkg/chatter/whitelist"
+	"github.com/vaaandark/qabot/pkg/messageenvelope"
 )
 
 type Chatter struct {

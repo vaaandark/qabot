@@ -3,9 +3,10 @@ package cmd
 import (
 	"fmt"
 	"log"
-	"qabot/chatter/whitelist"
 	"strconv"
 	"strings"
+
+	"github.com/vaaandark/qabot/pkg/chatter/whitelist"
 )
 
 type Cmd struct {
@@ -27,7 +28,7 @@ func (ca Cmd) cmdCheckHealth(_ int64, _ []string) (string, error) {
 }
 
 func (ca Cmd) cmdHelp(_ int64, _ []string) (string, error) {
-	return "qabot 使用方式：\n\n" +
+	return "github.com/vaaandark/qabot 使用方式：\n\n" +
 		"  - 新建上下文：\n" +
 		"      - 群聊中：@bot 发送消息且该消息不是一条回复；\n" +
 		"      - 私聊中：发送消息。\n\n" +

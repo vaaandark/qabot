@@ -5,9 +5,10 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"qabot/messageenvelope"
-	"qabot/onebot"
-	"qabot/util"
+
+	"github.com/vaaandark/qabot/pkg/messageenvelope"
+	"github.com/vaaandark/qabot/pkg/onebot"
+	"github.com/vaaandark/qabot/pkg/util"
 )
 
 type Receiver struct {

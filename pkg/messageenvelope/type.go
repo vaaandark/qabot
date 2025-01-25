@@ -2,9 +2,10 @@ package messageenvelope
 
 import (
 	"fmt"
-	"qabot/onebot"
 	"strings"
 	"time"
+
+	"github.com/vaaandark/qabot/pkg/onebot"
 )
 
 type MessageEnvelope struct {

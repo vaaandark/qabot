@@ -3,6 +3,10 @@ package chatcontext
 import (
 	"encoding/json"
 	"fmt"
+	"log"
+	"path"
+	"sort"
+	"strings"
 	"time"
 
 	"github.com/syndtr/goleveldb/leveldb"
@@ -49,6 +53,15 @@ func NewContextNodeKey(userId, groupId *int64, messageId int32) ContextNodeKey {
 	}
 }
 
+func (ck ContextNodeKey) Id() (id string) {
+	if ck.GroupId != nil {
+		id = fmt.Sprintf("group/%d", *ck.GroupId)
+	} else if ck.UserId != nil {
+		id = fmt.Sprintf("user/%d", *ck.UserId)
+	}
+	return
+}
+
 func (ck ContextNodeKey) Key() []byte {
 	var s string
 	if ck.GroupId != nil {
@@ -63,6 +76,104 @@ type ChatContext struct {
 	db            *leveldb.DB
 	privatePrompt string
 	groupPrompt   string
+}
+
+type DialogNode struct {
+	Id        string `json:"id"`
+	Role      string `json:"role"`
+	Content   string `json:"content"`
+	ReplyTo   *int32
+	Timestamp time.Time
+	Children  []*DialogNode `json:"children"`
+}
+
+func NewDialogNode(id, role, text string, replyTo *int32, timestamp time.Time, children []*DialogNode) *DialogNode {
+	return &DialogNode{
+		Id:        id,
+		Role:      role,
+		Content:   text,
+		ReplyTo:   replyTo,
+		Timestamp: timestamp,
+		Children:  children,
+	}
+}
+
+func maskLastFour(input string) string {
+	runes := []rune(input)
+	length := len(runes)
+	switch {
+	case length == 0:
+		return ""
+	case length <= 4:
+		return strings.Repeat("x", length)
+	default:
+		return string(runes[:length-4]) + "xxxx"
+	}
+}
+
+func (cc ChatContext) BuildIndexedDialogTrees(fuzzId bool) (map[string][]*DialogNode, error) {
+	roots, err := cc.buildDialogTrees()
+	if err != nil {
+		return nil, err
+	}
+
+	indexedDialogTrees := make(map[string][]*DialogNode)
+	for _, root := range roots {
+		id := root.Id
+		if fuzzId {
+			id = maskLastFour(id)
+		}
+		trees, exist := indexedDialogTrees[id]
+		if exist {
+			trees = append(trees, root)
+		} else {
+			trees = []*DialogNode{root}
+		}
+		indexedDialogTrees[id] = trees
+	}
+
+	for key, nodes := range indexedDialogTrees {
+		sort.Slice(nodes, func(i, j int) bool {
+			return nodes[i].Timestamp.After(nodes[j].Timestamp)
+		})
+		indexedDialogTrees[key] = nodes
+	}
+
+	return indexedDialogTrees, nil
+}
+
+func visitNode(key string, roots *[]*DialogNode, nodeMap map[string]*DialogNode) {
+	node := nodeMap[key]
+	if node.ReplyTo == nil {
+		*roots = append(*roots, node)
+	} else {
+		parentKey := fmt.Sprintf("%s/%d", node.Id, *node.ReplyTo)
+		if parentNode, exist := nodeMap[parentKey]; exist {
+			parentNode.Children = append(parentNode.Children, node)
+		}
+	}
+}
+
+func (cc ChatContext) buildDialogTrees() ([]*DialogNode, error) {
+	nodeMap := make(map[string]*DialogNode)
+	iter := cc.db.NewIterator(nil, nil)
+
+	for iter.Next() {
+		key := string(iter.Key())
+		var val ContextNodeValue
+		if err := json.Unmarshal(iter.Value(), &val); err != nil {
+			log.Printf("Failed to unmarshal: %v", err)
+			continue
+		}
+		nodeMap[key] = NewDialogNode(path.Dir(key), val.Message.Role, val.Message.Content, val.ReplyTo, val.Timestamp, []*DialogNode{})
+	}
+
+	roots := []*DialogNode{}
+	for key := range nodeMap {
+		visitNode(key, &roots, nodeMap)
+	}
+
+	return roots, nil
 }
 
 func NewChatContext(db *leveldb.DB, privatePrompt, groupPrompt string) ChatContext {
