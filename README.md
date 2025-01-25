@@ -6,6 +6,12 @@ qabot is for QQ AI Bot.
 
 ## 部署
 
+可以直接使用 `example` 目录下的文件进行部署：
+
+1. 把 `dialog-auth-config.json`、`id-map.json`、`whitelist.json` 和 `config` 放到 `/etc/qabot` 目录下；
+2. 把 `qabot.service` 放到 `/etc/systemd/system`；
+3. `systemctl enable --now qabot` 即可启动。
+
 ```console
 Usage of qabot:
   -api-key string

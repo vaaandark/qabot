@@ -1,0 +1,31 @@
+{
+    "admins": [
+        {
+            "name": "admin",
+            "password": "admin",
+            "welcome": "欢迎管理员"
+        }
+    ],
+    "non_admins": [
+        {
+            "name": "non-admin1",
+            "password": "non-admin1",
+            "allowed": [
+                "group/1",
+                "group/2",
+                "group/3"
+            ],
+            "welcome": "你不是管理员，只有群一二三的权限"
+        },
+        {
+            "name": "non-admin2",
+            "password": "non-admin2",
+            "allowed": [
+                "group/4",
+                "group/5",
+                "group/6"
+            ],
+            "welcome": "你不是管理员，只有群四五六的权限"
+        }
+    ]
+}
