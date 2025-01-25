@@ -13,6 +13,8 @@ import (
 	"qabot/util"
 	"strings"
 
+	_ "net/http/pprof"
+
 	"github.com/syndtr/goleveldb/leveldb"
 )
 
@@ -33,6 +35,7 @@ func main() {
 	privatePrompt := flag.String("private-prompt", "", "私聊中给大语言模型的提示词")
 	groupPrompt := flag.String("group-prompt", "", "群聊中给大语言模型的提示词")
 	dbPath := flag.String("db", "context.db", "持久化存储上下文")
+	userPprof := flag.Bool("pprof", false, "使用 pprof 性能分析")
 
 	log.Printf("Command line args: %s", strings.Join(os.Args, ", "))
 	flag.Parse()
@@ -62,6 +65,15 @@ func main() {
 
 	go c.Run(stopCh)
 	go s.Run(stopCh)
+
+	if *userPprof {
+		go func() {
+			log.Println("Pprof is now listening :6060")
+			if err := http.ListenAndServe(":6060", nil); err != nil {
+				log.Fatalf("Failed to start pprof: %v", err)
+			}
+		}()
+	}
 
 	handler := receiver.NewReceiver(receivedMessageCh)
 
