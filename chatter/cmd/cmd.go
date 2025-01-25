@@ -38,7 +38,17 @@ func (ca Cmd) cmdHelp(_ int64, _ []string) (string, error) {
 		"  - 如果回复 a2，则 q1 -> a1 -> q2 -> a2 作为上文。\n\n" +
 		"好处：\n" +
 		"  1. 可以使用更多的上下文；\n" +
-		"  2. 可以忽略不想要的上文", nil
+		"  2. 可以忽略不想要的上文\n\n\n" +
+		"你也可以使用命令\n\n" +
+		helpStr(), nil
+}
+
+func helpStr() string {
+	return "Non-admin cmd:\n" +
+		"    /help(/h)\n" +
+		"    /check-health(/ch)\n" +
+		"Admin cmd:\n" +
+		"    /whitelist(/wl)"
 }
 
 func (ca *Cmd) cmdWhitelist(userId int64, cmds []string) (string, error) {
@@ -101,6 +111,8 @@ func (ca *Cmd) Exec(userId int64, text string) (output string) {
 	}
 
 	switch cmds[0] {
+	case "":
+		return helpStr()
 	case "wl", "whitelist":
 		cmdOutput, err := ca.cmdWhitelist(userId, cmds)
 		if err != nil {
