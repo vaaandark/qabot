@@ -24,3 +24,5 @@ bin
 tmp
 
 /qabot
+/*.json
+

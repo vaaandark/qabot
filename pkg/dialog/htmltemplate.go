@@ -98,8 +98,9 @@ const htmlTemplate = `
     </style>
 </head>
 <body>
+    <h1>{{.Welcome}}</h1>
     <div class="dialog-container">
-        {{range $groupKey, $trees := .}}
+        {{range $groupKey, $trees := .IndexedDialogTreesmap}}
         <div class="group">
             <div class="group-header" onclick="toggleGroup(this)">
                 <span class="toggle">▶</span>

@@ -111,7 +111,20 @@ func maskLastFour(input string) string {
 	}
 }
 
-func (cc ChatContext) BuildIndexedDialogTrees(fuzzId bool) (map[string][]*DialogNode, error) {
+type Dialogs struct {
+	Welcome               string
+	IndexedDialogTreesmap map[string][]*DialogNode
+}
+
+func (cc ChatContext) BuildIndexedDialogTrees(fuzzId bool, all bool, allowed []string, welcome string) (*Dialogs, error) {
+	var allowedMap map[string]struct{}
+	if !all {
+		allowedMap = make(map[string]struct{})
+		for _, a := range allowed {
+			allowedMap[a] = struct{}{}
+		}
+	}
+
 	roots, err := cc.buildDialogTrees()
 	if err != nil {
 		return nil, err
@@ -120,6 +133,11 @@ func (cc ChatContext) BuildIndexedDialogTrees(fuzzId bool) (map[string][]*Dialog
 	indexedDialogTrees := make(map[string][]*DialogNode)
 	for _, root := range roots {
 		id := root.Id
+		if !all {
+			if _, exist := allowedMap[id]; !exist {
+				continue
+			}
+		}
 		if fuzzId {
 			id = maskLastFour(id)
 		}
@@ -139,7 +157,9 @@ func (cc ChatContext) BuildIndexedDialogTrees(fuzzId bool) (map[string][]*Dialog
 		indexedDialogTrees[key] = nodes
 	}
 
-	return indexedDialogTrees, nil
+	return &Dialogs{
+		Welcome:               welcome,
+		IndexedDialogTreesmap: indexedDialogTrees}, nil
 }
 
 func visitNode(key string, roots *[]*DialogNode, nodeMap map[string]*DialogNode) {

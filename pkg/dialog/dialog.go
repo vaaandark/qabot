@@ -33,18 +33,23 @@ func init() {
 
 type DialogHtmlBuilder struct {
 	ChatContext chatcontext.ChatContext
+	Auth        *Auth
 	FuzzId      bool
 }
 
-func NewDialogHtmlBuilder(chatContext chatcontext.ChatContext, fuzzId bool) DialogHtmlBuilder {
+func NewDialogHtmlBuilder(chatContext chatcontext.ChatContext, auth *Auth, fuzzId bool) DialogHtmlBuilder {
 	return DialogHtmlBuilder{
 		ChatContext: chatContext,
+		Auth:        auth,
 		FuzzId:      fuzzId,
 	}
 }
 
-func (dhb DialogHtmlBuilder) buildDialogHtml(w http.ResponseWriter) error {
-	indexedDialogTrees, err := dhb.ChatContext.BuildIndexedDialogTrees(dhb.FuzzId)
+func (dhb DialogHtmlBuilder) buildDialogHtml(w http.ResponseWriter, all bool, user *User) error {
+	if user == nil {
+		return fmt.Errorf("User is not found")
+	}
+	indexedDialogTrees, err := dhb.ChatContext.BuildIndexedDialogTrees(dhb.FuzzId, all, user.Allowed, user.Welcome)
 	if err != nil {
 		return err
 	}
@@ -52,7 +57,16 @@ func (dhb DialogHtmlBuilder) buildDialogHtml(w http.ResponseWriter) error {
 }
 
 func (dhb DialogHtmlBuilder) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if err := dhb.buildDialogHtml(w); err != nil {
+	name, password := getNameAndPassword(r)
+	if name == nil || password == nil {
+		http.Error(w, "Empty user name", http.StatusInternalServerError)
+		return
+	}
+
+	all := dhb.Auth.isAdmin(*name, *password)
+	user := dhb.Auth.getUser(*name)
+
+	if err := dhb.buildDialogHtml(w, all, user); err != nil {
 		http.Error(w, fmt.Sprintf("Failed to build dialog html: %v", err), http.StatusInternalServerError)
 	}
 }

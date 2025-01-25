@@ -38,8 +38,7 @@ func main() {
 	groupPrompt := flag.String("group-prompt", "", "群聊中给大语言模型的提示词")
 	dbPath := flag.String("db", "context.db", "持久化存储上下文")
 	dialogEndpoint := flag.String("dialog-endpoint", "127.0.0.1:6060", "查看对话历史记录的地址")
-	dialogAuthUser := flag.String("dialog-auth-user", "admin", "查看对话历史记录认证时的用户名")
-	dialogAuthPassword := flag.String("dialog-auth-password", "admin", "查看对话历史记录认证时的密码")
+	dialogAuthConfig := flag.String("dialog-auth-config", "dialog-auth-config.yaml", "查看对话历史记录认证的配置文件")
 	dialogFuzzId := flag.Bool("dialog-fuzz-id", true, "查看对话历史记录时隐藏对话的群 ID 或用户 ID")
 
 	log.Printf("Command line args: %s", strings.Join(os.Args, ", "))
@@ -78,13 +77,18 @@ func main() {
 		return http.ListenAndServe(*eventEndpoint, receiver.NewReceiver(receivedMessageCh))
 	})
 
-	g.Go(func() error {
-		log.Printf("Dialog service starting on %s", *dialogEndpoint)
-		return http.ListenAndServe(*dialogEndpoint,
-			dialog.RateLimiter(
-				dialog.BasicAuth(*dialogAuthUser, *dialogAuthPassword,
-					dialog.NewDialogHtmlBuilder(chatContext, *dialogFuzzId))))
-	})
+	auth, err := dialog.LoadAuthFromFile(*dialogAuthConfig)
+	if err != nil {
+		log.Printf("Failed to load auth config file: %v", err)
+	} else {
+		g.Go(func() error {
+			log.Printf("Dialog service starting on %s", *dialogEndpoint)
+			return http.ListenAndServe(*dialogEndpoint,
+				dialog.RateLimiter(
+					dialog.BasicAuth(auth,
+						dialog.NewDialogHtmlBuilder(chatContext, auth, *dialogFuzzId))))
+		})
+	}
 
 	if err := g.Wait(); err != nil {
 		log.Fatalf("Service error: %v", err)
