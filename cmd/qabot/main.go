@@ -11,6 +11,7 @@ import (
 	"github.com/vaaandark/qabot/pkg/chatcontext"
 	"github.com/vaaandark/qabot/pkg/chatter"
 	"github.com/vaaandark/qabot/pkg/dialog"
+	"github.com/vaaandark/qabot/pkg/idmap"
 	"github.com/vaaandark/qabot/pkg/messageenvelope"
 	"github.com/vaaandark/qabot/pkg/receiver"
 	"github.com/vaaandark/qabot/pkg/sender"
@@ -40,9 +41,10 @@ func main() {
 	dialogEndpoint := flag.String("dialog-endpoint", "127.0.0.1:6060", "查看对话历史记录的地址")
 	dialogAuthConfig := flag.String("dialog-auth-config", "dialog-auth-config.yaml", "查看对话历史记录认证的配置文件")
 	dialogFuzzId := flag.Bool("dialog-fuzz-id", true, "查看对话历史记录时隐藏对话的群 ID 或用户 ID")
+	idMapPath := flag.String("id-map", "id-map.json", "群 id 和群名或用户 id 与用户名对应关系的配置文件")
 
-	log.Printf("Command line args: %s", strings.Join(os.Args, ", "))
 	flag.Parse()
+	log.Printf("Command line args: %s", strings.Join(os.Args, ", "))
 
 	log.Printf("Whitelist path: %s", *whitelist)
 
@@ -77,6 +79,11 @@ func main() {
 		return http.ListenAndServe(*eventEndpoint, receiver.NewReceiver(receivedMessageCh))
 	})
 
+	idMap, err := idmap.LoadIdMapFromFile(*idMapPath)
+	if err != nil {
+		log.Printf("Failed to load id map config file: %v", err)
+	}
+
 	auth, err := dialog.LoadAuthFromFile(*dialogAuthConfig)
 	if err != nil {
 		log.Printf("Failed to load auth config file: %v", err)
@@ -86,7 +93,7 @@ func main() {
 			return http.ListenAndServe(*dialogEndpoint,
 				dialog.RateLimiter(
 					dialog.BasicAuth(auth,
-						dialog.NewDialogHtmlBuilder(chatContext, auth, *dialogFuzzId))))
+						dialog.NewDialogHtmlBuilder(chatContext, auth, *dialogFuzzId, *idMap))))
 		})
 	}
 

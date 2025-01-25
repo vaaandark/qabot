@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/syndtr/goleveldb/leveldb"
+	"github.com/vaaandark/qabot/pkg/idmap"
 )
 
 type Message struct {
@@ -116,7 +117,7 @@ type Dialogs struct {
 	IndexedDialogTreesmap map[string][]*DialogNode
 }
 
-func (cc ChatContext) BuildIndexedDialogTrees(fuzzId bool, all bool, allowed []string, welcome string) (*Dialogs, error) {
+func (cc ChatContext) BuildIndexedDialogTrees(fuzzId bool, all bool, allowed []string, welcome string, idMap idmap.IdMap) (*Dialogs, error) {
 	var allowedMap map[string]struct{}
 	if !all {
 		allowedMap = make(map[string]struct{})
@@ -138,8 +139,12 @@ func (cc ChatContext) BuildIndexedDialogTrees(fuzzId bool, all bool, allowed []s
 				continue
 			}
 		}
+		name := idMap.LookupName(id)
 		if fuzzId {
 			id = maskLastFour(id)
+		}
+		if name != nil {
+			id = fmt.Sprintf("%s@%s", id, *name)
 		}
 		trees, exist := indexedDialogTrees[id]
 		if exist {

@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/vaaandark/qabot/pkg/chatcontext"
+	"github.com/vaaandark/qabot/pkg/idmap"
 )
 
 var tmpl *template.Template
@@ -35,13 +36,15 @@ type DialogHtmlBuilder struct {
 	ChatContext chatcontext.ChatContext
 	Auth        *Auth
 	FuzzId      bool
+	IdMap       idmap.IdMap
 }
 
-func NewDialogHtmlBuilder(chatContext chatcontext.ChatContext, auth *Auth, fuzzId bool) DialogHtmlBuilder {
+func NewDialogHtmlBuilder(chatContext chatcontext.ChatContext, auth *Auth, fuzzId bool, idMap idmap.IdMap) DialogHtmlBuilder {
 	return DialogHtmlBuilder{
 		ChatContext: chatContext,
 		Auth:        auth,
 		FuzzId:      fuzzId,
+		IdMap:       idMap,
 	}
 }
 
@@ -49,7 +52,7 @@ func (dhb DialogHtmlBuilder) buildDialogHtml(w http.ResponseWriter, all bool, us
 	if user == nil {
 		return fmt.Errorf("User is not found")
 	}
-	indexedDialogTrees, err := dhb.ChatContext.BuildIndexedDialogTrees(dhb.FuzzId, all, user.Allowed, user.Welcome)
+	indexedDialogTrees, err := dhb.ChatContext.BuildIndexedDialogTrees(dhb.FuzzId, all, user.Allowed, user.Welcome, dhb.IdMap)
 	if err != nil {
 		return err
 	}
