@@ -4,12 +4,13 @@ import (
 	"flag"
 	"log"
 	"net/http"
+	"os"
 	"qabot/chatcontext"
 	"qabot/chatter"
 	"qabot/messageenvelope"
-	"qabot/nix"
 	"qabot/receiver"
 	"qabot/sender"
+	"qabot/util"
 	"strings"
 
 	"github.com/syndtr/goleveldb/leveldb"
@@ -33,7 +34,9 @@ func main() {
 	groupPrompt := flag.String("group-prompt", "", "群聊中给大语言模型的提示词")
 	dbPath := flag.String("db", "context.db", "持久化存储上下文")
 
+	log.Printf("Command line args: %s", strings.Join(os.Args, ", "))
 	flag.Parse()
+
 	log.Printf("Whitelist path: %s", *whitelist)
 
 	*endpoint = addHttpUrlPrefix(*endpoint)
@@ -55,7 +58,7 @@ func main() {
 	}
 	s := sender.NewSender(toSendMessageCh, chatContext, *endpoint)
 
-	stopCh := nix.SetupSignalHandler()
+	stopCh := util.SetupSignalHandler()
 
 	go c.Run(stopCh)
 	go s.Run(stopCh)

@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"qabot/messageenvelope"
 	"qabot/onebot"
+	"qabot/util"
 )
 
 type Receiver struct {
@@ -38,8 +39,9 @@ func (receiver Receiver) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	if event.IsMessage() {
 		if text, replyTo, shouldBeIgnored, isCmd, isAt := event.ProcessText(); !shouldBeIgnored {
-			log.Printf("Receive event: %v", event)
-			receiver.ReceivedMessageCh <- messageenvelope.FromEvent(event, &text, replyTo, isCmd, isAt)
+			me := messageenvelope.FromEvent(event, &text, replyTo, isCmd, isAt)
+			log.Printf("Receive message from %s: %s", me.GetNamespacedGroupOrUserID(), util.TruncateLogStr(me.Text))
+			receiver.ReceivedMessageCh <- me
 		}
 	}
 }

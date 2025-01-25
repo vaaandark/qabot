@@ -1,6 +1,7 @@
 package messageenvelope
 
 import (
+	"fmt"
 	"qabot/onebot"
 	"strings"
 	"time"
@@ -25,6 +26,13 @@ func (m MessageEnvelope) GetGroupOrUserID() int64 {
 		return *m.GroupId
 	}
 	return m.UserId
+}
+func (m MessageEnvelope) GetNamespacedGroupOrUserID() string {
+	if m.GroupId != nil {
+		return fmt.Sprintf("group/%d", *m.GroupId)
+	} else {
+		return fmt.Sprintf("user/%d", m.UserId)
+	}
 }
 
 func FromEvent(event onebot.Event, text *string, replyTo *int32, isCmd, isAt bool) MessageEnvelope {

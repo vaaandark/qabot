@@ -1,9 +1,10 @@
-package nix
+package util
 
 import (
 	"log"
 	"os"
 	"os/signal"
+	"strconv"
 	"syscall"
 	"time"
 )
@@ -22,4 +23,15 @@ func SetupSignalHandler() (stopCh <-chan struct{}) {
 		os.Exit(1)
 	}()
 	return stop
+}
+
+const maxLogStrLen = 80
+
+func TruncateLogStr(text string) string {
+	ellipsis := "..."
+	maxLen := maxLogStrLen - len(ellipsis)
+	if len(text) > maxLogStrLen {
+		text = text[:maxLen] + "..."
+	}
+	return strconv.Quote(text)
 }
