@@ -8,16 +8,16 @@ import (
 	"log"
 	"net/http"
 	"qabot/chatcontext"
-	"qabot/chatter/cmdadaptor"
-	"qabot/chatter/whitelistadaptor"
+	"qabot/chatter/cmd"
+	"qabot/chatter/whitelist"
 	"qabot/messageenvelope"
 )
 
 type Chatter struct {
 	ReceivedMessageCh chan messageenvelope.MessageEnvelope
 	ToSendMessageCh   chan messageenvelope.MessageEnvelope
-	WhitelistAdaptor  whitelistadaptor.WhitelistAdaptor
-	CmdAdaptor        cmdadaptor.CmdAdaptor
+	WhitelistAdaptor  whitelist.Whitelist
+	CmdAdaptor        cmd.Cmd
 	ChatContext       *chatcontext.ChatContext
 	ApiUrl            string
 	ApiKey            string
@@ -25,12 +25,12 @@ type Chatter struct {
 }
 
 func NewChatter(receiveMessageCh, toSendMessageCh chan messageenvelope.MessageEnvelope, whitelistFilePath string, chatContext *chatcontext.ChatContext, apiUrl, apiKey, model string) (*Chatter, error) {
-	wa, err := whitelistadaptor.NewWhitelistAdaptor(whitelistFilePath)
+	wa, err := whitelist.NewWhitelist(whitelistFilePath)
 	if err != nil {
 		return nil, err
 	}
 
-	ca := cmdadaptor.NewCmdAdaptor(*wa)
+	ca := cmd.NewCmd(*wa)
 
 	return &Chatter{
 		ReceivedMessageCh: receiveMessageCh,

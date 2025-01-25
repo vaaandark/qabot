@@ -1,32 +1,32 @@
-package cmdadaptor
+package cmd
 
 import (
 	"fmt"
 	"log"
-	"qabot/chatter/whitelistadaptor"
+	"qabot/chatter/whitelist"
 	"strconv"
 	"strings"
 )
 
-type CmdAdaptor struct {
-	WhitelistAdaptor whitelistadaptor.WhitelistAdaptor
+type Cmd struct {
+	WhitelistAdaptor whitelist.Whitelist
 }
 
-func NewCmdAdaptor(whitelistAdaptor whitelistadaptor.WhitelistAdaptor) CmdAdaptor {
-	return CmdAdaptor{
+func NewCmd(whitelistAdaptor whitelist.Whitelist) Cmd {
+	return Cmd{
 		WhitelistAdaptor: whitelistAdaptor,
 	}
 }
 
-func (ca CmdAdaptor) IsAdmin(userId int64) bool {
+func (ca Cmd) IsAdmin(userId int64) bool {
 	return ca.WhitelistAdaptor.IsAdmin(userId)
 }
 
-func (ca CmdAdaptor) cmdCheckHealth(_ int64, _ []string) (string, error) {
+func (ca Cmd) cmdCheckHealth(_ int64, _ []string) (string, error) {
 	return "1", nil
 }
 
-func (ca CmdAdaptor) cmdHelp(_ int64, _ []string) (string, error) {
+func (ca Cmd) cmdHelp(_ int64, _ []string) (string, error) {
 	return "qabot 使用方式：\n\n" +
 		"  - 新建上下文：\n" +
 		"      - 群聊中：@bot 发送消息且该消息不是一条回复；\n" +
@@ -41,7 +41,7 @@ func (ca CmdAdaptor) cmdHelp(_ int64, _ []string) (string, error) {
 		"  2. 可以忽略不想要的上文", nil
 }
 
-func (ca *CmdAdaptor) cmdWhitelist(userId int64, cmds []string) (string, error) {
+func (ca *Cmd) cmdWhitelist(userId int64, cmds []string) (string, error) {
 	if !ca.IsAdmin(userId) {
 		return fmt.Sprintf("You(%d) are not administrator.", userId), nil
 	}
@@ -93,7 +93,7 @@ func (ca *CmdAdaptor) cmdWhitelist(userId int64, cmds []string) (string, error) 
 	}
 }
 
-func (ca *CmdAdaptor) Exec(userId int64, text string) (output string) {
+func (ca *Cmd) Exec(userId int64, text string) (output string) {
 	cmds := strings.Split(text, " ")
 	if len(cmds) == 0 {
 		output = "Empty cmd"

@@ -1,4 +1,4 @@
-package whitelistadaptor
+package whitelist
 
 import (
 	"encoding/json"
@@ -7,13 +7,13 @@ import (
 	"time"
 )
 
-type WhitelistAdaptor struct {
+type Whitelist struct {
 	FilePath string
 	ModTime  time.Time
-	whitelist
+	whitelistData
 }
 
-func (wa WhitelistAdaptor) IsModified() bool {
+func (wa Whitelist) IsModified() bool {
 	if fileInfo, err := os.Stat(wa.FilePath); err != nil {
 		return false
 	} else {
@@ -21,9 +21,9 @@ func (wa WhitelistAdaptor) IsModified() bool {
 	}
 }
 
-func NewWhitelistAdaptor(filePath string) (*WhitelistAdaptor, error) {
+func NewWhitelist(filePath string) (*Whitelist, error) {
 	_, err := os.Stat(filePath)
-	wa := &WhitelistAdaptor{}
+	wa := &Whitelist{}
 	wa.FilePath = filePath
 
 	if err != nil {
@@ -45,29 +45,29 @@ func NewWhitelistAdaptor(filePath string) (*WhitelistAdaptor, error) {
 	return wa, nil
 }
 
-func (wa *WhitelistAdaptor) AddUser(userId int64) error {
+func (wa *Whitelist) AddUser(userId int64) error {
 	if wa.IsModified() {
 		log.Printf("Whitelist file %s has been modified", wa.FilePath)
 		if err := wa.LoadFile(); err != nil {
 			return err
 		}
 	}
-	wa.whitelist.addUser(userId)
+	wa.whitelistData.addUser(userId)
 	return wa.DumpFile()
 }
 
-func (wa *WhitelistAdaptor) AddGroup(groupId int64) error {
+func (wa *Whitelist) AddGroup(groupId int64) error {
 	if wa.IsModified() {
 		log.Printf("Whitelist file %s has been modified", wa.FilePath)
 		if err := wa.LoadFile(); err != nil {
 			return err
 		}
 	}
-	wa.whitelist.addGroup(groupId)
+	wa.whitelistData.addGroup(groupId)
 	return wa.DumpFile()
 }
 
-func (wa WhitelistAdaptor) Show() (*string, error) {
+func (wa Whitelist) Show() (*string, error) {
 	if wa.IsModified() {
 		log.Printf("Whitelist file %s has been modified", wa.FilePath)
 		if err := wa.LoadFile(); err != nil {
@@ -75,7 +75,7 @@ func (wa WhitelistAdaptor) Show() (*string, error) {
 		}
 	}
 
-	b, err := json.Marshal(wa.whitelist)
+	b, err := json.Marshal(wa.whitelistData)
 	if err != nil {
 		return nil, err
 	}
@@ -83,8 +83,8 @@ func (wa WhitelistAdaptor) Show() (*string, error) {
 	return &s, nil
 }
 
-func (wa *WhitelistAdaptor) DumpFile() error {
-	if err := wa.whitelist.DumpFile(wa.FilePath); err != nil {
+func (wa *Whitelist) DumpFile() error {
+	if err := wa.whitelistData.DumpFile(wa.FilePath); err != nil {
 		return err
 	}
 
@@ -97,7 +97,7 @@ func (wa *WhitelistAdaptor) DumpFile() error {
 	return nil
 }
 
-func (wa *WhitelistAdaptor) LoadFile() error {
+func (wa *Whitelist) LoadFile() error {
 	whitelist, err := loadFile(wa.FilePath)
 	if err != nil {
 		return err
@@ -109,12 +109,12 @@ func (wa *WhitelistAdaptor) LoadFile() error {
 	}
 
 	wa.ModTime = fileInfo.ModTime()
-	wa.whitelist = *whitelist
+	wa.whitelistData = *whitelist
 
 	return nil
 }
 
-func (wa *WhitelistAdaptor) HasGroup(groupId int64) bool {
+func (wa *Whitelist) HasGroup(groupId int64) bool {
 	if wa.IsModified() {
 		log.Printf("Whitelist file %s has been modified", wa.FilePath)
 		if err := wa.LoadFile(); err != nil {
@@ -122,10 +122,10 @@ func (wa *WhitelistAdaptor) HasGroup(groupId int64) bool {
 			return false
 		}
 	}
-	return wa.whitelist.hasGroup(groupId)
+	return wa.whitelistData.hasGroup(groupId)
 }
 
-func (wa *WhitelistAdaptor) HasUser(userId int64) bool {
+func (wa *Whitelist) HasUser(userId int64) bool {
 	if wa.IsModified() {
 		log.Printf("Whitelist file %s has been modified", wa.FilePath)
 		if err := wa.LoadFile(); err != nil {
@@ -133,34 +133,34 @@ func (wa *WhitelistAdaptor) HasUser(userId int64) bool {
 			return false
 		}
 	}
-	return wa.whitelist.hasUser(userId)
+	return wa.whitelistData.hasUser(userId)
 }
 
-func (wa WhitelistAdaptor) IsAdmin(userId int64) bool {
-	return wa.whitelist.isAdmin(userId)
+func (wa Whitelist) IsAdmin(userId int64) bool {
+	return wa.whitelistData.isAdmin(userId)
 }
 
-type whitelist struct {
+type whitelistData struct {
 	UserIds  []int64 `json:"user_ids"`
 	GroupIds []int64 `json:"group_ids"`
 	Admin    *int64  `json:"admin,omitempty"`
 }
 
-func (w whitelist) DumpFile(path string) error {
-	bytes, err := json.Marshal(w)
+func (wd whitelistData) DumpFile(path string) error {
+	bytes, err := json.Marshal(wd)
 	if err != nil {
 		return nil
 	}
 	return os.WriteFile(path, bytes, 0644)
 }
 
-func loadFile(path string) (*whitelist, error) {
+func loadFile(path string) (*whitelistData, error) {
 	bytes, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
 
-	whitelist := &whitelist{}
+	whitelist := &whitelistData{}
 	err = json.Unmarshal(bytes, whitelist)
 	if err != nil {
 		return nil, err
@@ -169,8 +169,8 @@ func loadFile(path string) (*whitelist, error) {
 	return whitelist, nil
 }
 
-func (w whitelist) hasUser(userId int64) bool {
-	for _, n := range w.UserIds {
+func (wd whitelistData) hasUser(userId int64) bool {
+	for _, n := range wd.UserIds {
 		if n == userId {
 			return true
 		}
@@ -178,8 +178,8 @@ func (w whitelist) hasUser(userId int64) bool {
 	return false
 }
 
-func (w whitelist) hasGroup(groupId int64) bool {
-	for _, n := range w.GroupIds {
+func (wd whitelistData) hasGroup(groupId int64) bool {
+	for _, n := range wd.GroupIds {
 		if n == groupId {
 			return true
 		}
@@ -187,14 +187,14 @@ func (w whitelist) hasGroup(groupId int64) bool {
 	return false
 }
 
-func (w *whitelist) addUser(userId int64) {
-	w.UserIds = append(w.UserIds, userId)
+func (wd *whitelistData) addUser(userId int64) {
+	wd.UserIds = append(wd.UserIds, userId)
 }
 
-func (w *whitelist) addGroup(groupId int64) {
-	w.GroupIds = append(w.GroupIds, groupId)
+func (wd *whitelistData) addGroup(groupId int64) {
+	wd.GroupIds = append(wd.GroupIds, groupId)
 }
 
-func (w whitelist) isAdmin(userId int64) bool {
-	return w.Admin != nil && *w.Admin == userId
+func (wd whitelistData) isAdmin(userId int64) bool {
+	return wd.Admin != nil && *wd.Admin == userId
 }
