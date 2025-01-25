@@ -3,8 +3,8 @@ package dialog
 import (
 	"errors"
 	"fmt"
+	"html/template"
 	"net/http"
-	"text/template"
 
 	"github.com/vaaandark/qabot/pkg/chatcontext"
 )
