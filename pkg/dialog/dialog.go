@@ -4,7 +4,9 @@ import (
 	"errors"
 	"fmt"
 	"html/template"
+	"log"
 	"net/http"
+	"time"
 
 	"github.com/vaaandark/qabot/pkg/chatcontext"
 	"github.com/vaaandark/qabot/pkg/idmap"
@@ -69,7 +71,9 @@ func (dhb DialogHtmlBuilder) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	all := dhb.Auth.isAdmin(*name, *password)
 	user := dhb.Auth.getUser(*name)
 
+	startTime := time.Now()
 	if err := dhb.buildDialogHtml(w, all, user); err != nil {
 		http.Error(w, fmt.Sprintf("Failed to build dialog html: %v", err), http.StatusInternalServerError)
 	}
+	log.Printf("Cost %s to build dialog html", time.Since(startTime))
 }
