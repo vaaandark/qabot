@@ -1,12 +1,10 @@
 package util
 
 import (
-	"log"
 	"os"
 	"os/signal"
 	"strconv"
 	"syscall"
-	"time"
 )
 
 func SetupSignalHandler() (stopCh <-chan struct{}) {
@@ -16,10 +14,10 @@ func SetupSignalHandler() (stopCh <-chan struct{}) {
 	go func() {
 		<-c
 		close(stop)
-		for i := 3; i > 0; i-- {
-			log.Printf("There are %ds left to exit", i)
-			time.Sleep(1 * time.Second)
-		}
+		// for i := 3; i > 0; i-- {
+		// 	log.Printf("There are %ds left to exit", i)
+		// 	time.Sleep(1 * time.Second)
+		// }
 		os.Exit(1)
 	}()
 	return stop
