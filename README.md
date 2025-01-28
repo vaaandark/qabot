@@ -6,6 +6,54 @@ qabot is for QQ AI Bot.
 
 ## 部署
 
+### 部署 napcat
+
+按照 napcat 的 [github](https://github.com/NapNeko/NapCatQQ) 介绍配置，可以把 `/opt/QQ/resources/app/app_launcher/napcat/config/onebot11_<QQ号>.json` 配置成这个样子：
+
+```json
+{
+  "network": {
+    "httpServers": [
+      {
+        "name": "httpServer",
+        "enable": true,
+        "port": 3000,
+        "host": "127.0.0.1",
+        "enableCors": true,
+        "enableWebsocket": true,
+        "messagePostFormat": "string",
+        "token": "",
+        "debug": false
+      }
+    ],
+    "httpSseServers": [],
+    "httpClients": [
+      {
+        "name": "httpClient",
+        "enable": true,
+        "url": "http://localhost:8080",
+        "messagePostFormat": "array",
+        "reportSelfMessage": false,
+        "token": "",
+        "debug": false
+      }
+    ],
+    "websocketServers": [],
+    "websocketClients": []
+  },
+  "musicSignUrl": "",
+  "enableLocalFile2Url": false,
+  "parseMultMsg": false
+}
+```
+
+这样的目的：
+
+- 把 napcat 收到的消息上报到 8080 端口，给 qabot 处理；
+- napcat 监听 3000 端口的请求，即 qabot 给 napcat 发送请求，napcat 代为发送消息。
+
+### 部署 qabot
+
 可以直接使用 `example` 目录下的文件进行部署：
 
 1. 把 `dialog-auth-config.json`、`id-map.json`、`whitelist.json` 和 `config` 放到 `/etc/qabot` 目录下；
