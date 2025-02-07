@@ -12,6 +12,7 @@ import (
 	"github.com/vaaandark/qabot/pkg/chatter/cmd"
 	"github.com/vaaandark/qabot/pkg/chatter/whitelist"
 	"github.com/vaaandark/qabot/pkg/messageenvelope"
+	"github.com/vaaandark/qabot/pkg/providerconfig"
 )
 
 type Chatter struct {
@@ -20,12 +21,10 @@ type Chatter struct {
 	WhitelistAdaptor  whitelist.Whitelist
 	CmdAdaptor        cmd.Cmd
 	ChatContext       *chatcontext.ChatContext
-	ApiUrl            string
-	ApiKey            string
-	Model             string
+	Providers         []providerconfig.ProviderConfig
 }
 
-func NewChatter(receiveMessageCh, toSendMessageCh chan messageenvelope.MessageEnvelope, whitelistFilePath string, chatContext *chatcontext.ChatContext, apiUrl, apiKey, model string) (*Chatter, error) {
+func NewChatter(receiveMessageCh, toSendMessageCh chan messageenvelope.MessageEnvelope, whitelistFilePath string, chatContext *chatcontext.ChatContext, providers []providerconfig.ProviderConfig) (*Chatter, error) {
 	wa, err := whitelist.NewWhitelist(whitelistFilePath)
 	if err != nil {
 		return nil, err
@@ -39,9 +38,7 @@ func NewChatter(receiveMessageCh, toSendMessageCh chan messageenvelope.MessageEn
 		WhitelistAdaptor:  *wa,
 		CmdAdaptor:        ca,
 		ChatContext:       chatContext,
-		ApiUrl:            apiUrl,
-		ApiKey:            apiKey,
-		Model:             model,
+		Providers:         providers,
 	}, nil
 }
 
@@ -70,8 +67,8 @@ func (c Chatter) Run(stopCh <-chan struct{}) {
 	}
 }
 
-func (c Chatter) doPost(messages []chatcontext.Message) (*chatcontext.Message, error) {
-	request := CompletionRequestFromContext(c.Model, messages)
+func (c Chatter) doPost(messages []chatcontext.Message, apiUrl, apiModel, apiKey string) (*chatcontext.Message, error) {
+	request := CompletionRequestFromContext(apiModel, messages)
 
 	requestBytes, err := json.Marshal(request)
 	if err != nil {
@@ -79,12 +76,12 @@ func (c Chatter) doPost(messages []chatcontext.Message) (*chatcontext.Message, e
 	}
 
 	client := &http.Client{}
-	req, err := http.NewRequest("POST", c.ApiUrl, bytes.NewReader(requestBytes))
+	req, err := http.NewRequest("POST", apiUrl, bytes.NewReader(requestBytes))
 
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", c.ApiKey))
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", apiKey))
 	req.Header.Set("Content-Type", "application/json")
 
 	res, err := client.Do(req)
@@ -107,15 +104,15 @@ func (c Chatter) doPost(messages []chatcontext.Message) (*chatcontext.Message, e
 	return message, nil
 }
 
-func (c Chatter) chatWithLlm(m messageenvelope.MessageEnvelope) {
+func (c Chatter) chatWithLlm(p providerconfig.ProviderConfig, m messageenvelope.MessageEnvelope) error {
 	if c.ChatContext == nil {
-		return
+		return nil
 	}
 
 	if m.ReplyTo != nil {
 		// 回复的不是 bot 且没有 at bot 的情况，不关心！
 		if !c.ChatContext.IsBotReply(&m.UserId, m.GroupId, *m.ReplyTo) && !m.IsAt {
-			return
+			return nil
 		}
 	}
 
@@ -125,26 +122,29 @@ func (c Chatter) chatWithLlm(m messageenvelope.MessageEnvelope) {
 	}, m.Timestamp)
 	if err != nil {
 		log.Printf("Failed to add user context: %v", err)
-		return
+		return nil
 	}
 
 	messages, err := c.ChatContext.LoadContextMessages(&m.UserId, m.GroupId, m.MessageId)
 	if err != nil {
 		log.Printf("Failed to load context: %v", err)
-		return
+		return nil
 	}
 
-	message, err := c.doPost(messages)
+	message, err := c.doPost(messages, p.Url, p.Model, p.Key)
 	if err != nil {
-		log.Printf("Failed to do post request: %v", err)
-		return
+		log.Printf("Failed to do post request to %s: %v", p.Name, err)
+		return err
 	} else if message == nil {
 		log.Print("Empty message")
-		return
+		return nil
 	}
 
 	m.Text = message.Content
+	m.ModelName = p.Name
 	c.ToSendMessageCh <- m
+
+	return nil
 }
 
 func (c *Chatter) execCmd(m messageenvelope.MessageEnvelope) {
@@ -157,6 +157,10 @@ func (c *Chatter) doChat(m messageenvelope.MessageEnvelope) {
 	if m.IsCmd {
 		c.execCmd(m)
 	} else {
-		c.chatWithLlm(m)
+		for _, p := range c.Providers {
+			if err := c.chatWithLlm(p, m); err == nil {
+				break
+			}
+		}
 	}
 }

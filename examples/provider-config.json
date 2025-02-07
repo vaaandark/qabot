@@ -1,0 +1,26 @@
+[
+    {
+        "name": "deepseek r1",
+        "url": "https://api.deepseek.com/chat/completions",
+        "model": "deepseek-reasoner",
+        "key": "xxxxxxxxxx"
+    },
+    {
+        "name": "deepseek v3",
+        "url": "https://api.deepseek.com/chat/completions",
+        "model": "deepseek-chat",
+        "key": "xxxxxxxxxx"
+    },
+    {
+        "name": "qwen-plus",
+        "url": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+        "model": "qwen-plus",
+        "key": "xxxxxxxxxx"
+    },
+    {
+        "name": "doubao",
+        "url": "https://ark.cn-beijing.volces.com/api/v3",
+        "model": "ep-20250117180121-glkbx",
+        "key": "xxxxxxxxxx"
+    }
+]

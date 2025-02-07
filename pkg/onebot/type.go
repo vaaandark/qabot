@@ -1,6 +1,7 @@
 package onebot
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 )
@@ -135,7 +136,7 @@ type GroupMessage struct {
 	Message []TypedMessage `json:"message"`
 }
 
-func NewPrivateMessage(userId int64, messageText string, replyTo *string) PrivateMessage {
+func NewPrivateMessage(userId int64, modelName string, messageText string, replyTo *string) PrivateMessage {
 	message := []TypedMessage{}
 
 	if replyTo != nil {
@@ -150,7 +151,7 @@ func NewPrivateMessage(userId int64, messageText string, replyTo *string) Privat
 	message = append(message, TypedMessage{
 		Type: "text",
 		Data: Data{
-			Text: messageText,
+			Text: fmt.Sprintf("[%s]\n\n-----\n\n%s", modelName, messageText),
 		},
 	})
 
@@ -160,7 +161,7 @@ func NewPrivateMessage(userId int64, messageText string, replyTo *string) Privat
 	}
 }
 
-func NewGroupMessage(groupId int64, messageText string, at *string, replyTo *string) GroupMessage {
+func NewGroupMessage(groupId int64, modelName string, messageText string, at *string, replyTo *string) GroupMessage {
 	message := []TypedMessage{}
 
 	if replyTo != nil {
@@ -184,7 +185,7 @@ func NewGroupMessage(groupId int64, messageText string, at *string, replyTo *str
 	message = append(message, TypedMessage{
 		Type: "text",
 		Data: Data{
-			Text: messageText,
+			Text: fmt.Sprintf("[%s]\n\n-----\n\n%s", modelName, messageText),
 		},
 	})
 

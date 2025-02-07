@@ -20,6 +20,7 @@ type MessageEnvelope struct {
 	IsCmd      bool
 	IsAt       bool
 	Timestamp  time.Time
+	ModelName  string
 }
 
 func (m MessageEnvelope) GetGroupOrUserID() int64 {
