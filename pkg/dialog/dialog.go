@@ -6,16 +6,19 @@ import (
 	"html/template"
 	"log"
 	"net/http"
+	"path"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/vaaandark/qabot/pkg/chatcontext"
 	"github.com/vaaandark/qabot/pkg/idmap"
 )
 
-var tmpl *template.Template
+var dialogTreeHtmlTmpl, dialogListHtmlTmpl *template.Template
 
 func init() {
-	tmpl = template.Must(template.New("dialog").Funcs(template.FuncMap{
+	dialogTreeHtmlTmpl = template.Must(template.New("dialogTree").Funcs(template.FuncMap{
 		"add": func(a, b int) int { return a + b },
 		"dict": func(values ...interface{}) (map[string]interface{}, error) {
 			dict := make(map[string]interface{})
@@ -31,7 +34,9 @@ func init() {
 			}
 			return dict, nil
 		},
-	}).Parse(htmlTemplate))
+	}).Parse(dialogTreeHtmlTemplate))
+
+	dialogListHtmlTmpl = template.Must(template.New("dialogList").Parse(dialogListHtmlTemplate))
 }
 
 type DialogHtmlBuilder struct {
@@ -50,7 +55,7 @@ func NewDialogHtmlBuilder(chatContext chatcontext.ChatContext, auth *Auth, fuzzI
 	}
 }
 
-func (dhb DialogHtmlBuilder) buildDialogHtml(w http.ResponseWriter, all bool, user *User) error {
+func (dhb DialogHtmlBuilder) buildDialogTreeHtml(w http.ResponseWriter, all bool, user *User) error {
 	if user == nil {
 		return fmt.Errorf("User is not found")
 	}
@@ -58,7 +63,61 @@ func (dhb DialogHtmlBuilder) buildDialogHtml(w http.ResponseWriter, all bool, us
 	if err != nil {
 		return err
 	}
-	return tmpl.Execute(w, indexedDialogTrees)
+	return dialogTreeHtmlTmpl.Execute(w, indexedDialogTrees)
+}
+
+func (dhb DialogHtmlBuilder) buildDialogListHtml(w http.ResponseWriter, key string, all bool, user *User) error {
+	if user == nil {
+		return fmt.Errorf("User is not found")
+	}
+
+	splited := strings.Split(key, "/")
+	if len(splited) != 3 {
+		return fmt.Errorf("bad path")
+	}
+
+	userOrGroup := splited[0]
+	var userId, groupId *int64
+	if userOrGroup == "user" {
+		id, err := strconv.ParseInt(splited[1], 10, 64)
+		if err != nil {
+			return err
+		}
+		userId = &id
+	} else if userOrGroup == "group" {
+		id, err := strconv.ParseInt(splited[1], 10, 64)
+		if err != nil {
+			return err
+		}
+		groupId = &id
+	} else {
+		return fmt.Errorf("bad path")
+	}
+
+	messageId, err := strconv.Atoi(splited[2])
+	if err != nil {
+		return err
+	}
+
+	shouldAllow := all
+	if !all {
+		for _, allowed := range user.Allowed {
+			if allowed == path.Dir(key) {
+				shouldAllow = true
+			}
+		}
+	}
+
+	if !shouldAllow {
+		return fmt.Errorf("no permission")
+	}
+
+	messages, err := dhb.ChatContext.LoadContextMessages(userId, groupId, int32(messageId))
+	if err != nil {
+		return err
+	}
+
+	return dialogListHtmlTmpl.Execute(w, messages)
 }
 
 func (dhb DialogHtmlBuilder) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -72,8 +131,18 @@ func (dhb DialogHtmlBuilder) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	user := dhb.Auth.getUser(*name)
 
 	startTime := time.Now()
-	if err := dhb.buildDialogHtml(w, all, user); err != nil {
-		http.Error(w, fmt.Sprintf("Failed to build dialog html: %v", err), http.StatusInternalServerError)
+	defer func() {
+		log.Printf("Cost %s to build dialog html for %s", time.Since(startTime), r.URL.Path)
+	}()
+
+	splited := strings.SplitN(r.URL.Path, "/", 2)
+	if len(splited) < 2 || len(splited[1]) == 0 {
+		if err := dhb.buildDialogTreeHtml(w, all, user); err != nil {
+			http.Error(w, fmt.Sprintf("Failed to build dialog tree html: %v", err), http.StatusInternalServerError)
+		}
+	} else {
+		if err := dhb.buildDialogListHtml(w, splited[1], all, user); err != nil {
+			http.Error(w, fmt.Sprintf("Failed to build dialog list html: %v", err), http.StatusInternalServerError)
+		}
 	}
-	log.Printf("Cost %s to build dialog html", time.Since(startTime))
 }

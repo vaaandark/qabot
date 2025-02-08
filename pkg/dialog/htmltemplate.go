@@ -1,10 +1,10 @@
 package dialog
 
-const htmlTemplate = `
+const dialogTreeHtmlTemplate = `
 <!DOCTYPE html>
 <html>
 <head>
-    <title>上下文管理</title>
+    <title>上下文🌳管理</title>
     <style>
         /* 基础容器 */
         .dialog-container {
@@ -157,7 +157,9 @@ const htmlTemplate = `
     <div class="node">
         <div class="role-{{.Role}}">
             {{if .Children}}<span class="toggle" onclick="toggleNode(this)">▶</span>{{end}}
-            <span class="role-tag">{{.Role}}</span>
+			<span class="role-tag">
+                <a href="/{{.Id}}/{{.MessageId}}">{{.Role}}</a>
+			</span>
             <span class="content-text">{{.Content}}</span>
         </div>
         {{if .Children}}
@@ -168,4 +170,103 @@ const htmlTemplate = `
     </div>
     {{end}}
 {{end}}
+`
+
+const dialogListHtmlTemplate = `
+<!DOCTYPE html>
+<html>
+<head>
+    <title>上下文列表</title>
+    <!-- 引入 marked.js -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <!-- 引入 highlight.js -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/github.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js"></script>
+    <!-- 引入 MathJax -->
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <style>
+        /* 保持原有样式，增加 Markdown 元素适配 */
+        body { font-family: -apple-system, sans-serif; background: #f8f9fa; }
+        .chat-container { max-width: 800px; margin: 20px auto; background: white; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.1); padding: 24px; }
+        .message { margin: 16px 0; }
+        .user-message { background: #007bff; color: white; border-radius: 15px 15px 0 15px; padding: 12px 16px; max-width: 70%; margin-left: auto; }
+        .assistant-message { background: #e9ecef; color: #212529; border-radius: 15px 15px 15px 0; padding: 12px 16px; max-width: 70%; }
+        .role-label { font-size: 0.85em; color: #6c757d; margin-bottom: 4px; }
+
+        /* Markdown 元素样式 */
+        .message-content strong { font-weight: 600; }
+        .message-content code { background: rgba(175,184,193,0.2); padding: 0.2em 0.4em; border-radius: 4px; }
+        .message-content pre { background: #f6f8fa; padding: 16px; border-radius: 6px; overflow-x: auto; }
+        .message-content pre code { background: transparent; padding: 0; display: block; }
+        .message-content a { color: #007bff; text-decoration: none; }
+        .message-content a:hover { text-decoration: underline; }
+        .message-content ul { padding-left: 20px; }
+        .message-content li { margin: 4px 0; }
+        /* LaTeX 公式样式 */
+        .message-content .mathjax { font-size: 1.1em; }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        {{range .}}
+        <div class="message">
+            <div class="role-label">
+                {{if eq .Role "user"}}你{{else}}助手{{end}}
+            </div>
+            <div class="{{if eq .Role "user"}}user-message{{else}}assistant-message{{end}}">
+                <!-- 原始 Markdown 内容存放在隐藏的 pre 标签中 -->
+                <pre class="raw-markdown" style="display: none;">{{.Content}}</pre>
+                <!-- 渲染后的内容显示在这里 -->
+                <div class="message-content"></div>
+            </div>
+        </div>
+        {{end}}
+    </div>
+
+    <script>
+        // 配置 marked
+        marked.setOptions({
+            breaks: true,    // 自动换行
+            highlight: function(code, lang) {
+                // 使用 highlight.js 进行代码高亮
+                const language = hljs.getLanguage(lang) ? lang : 'plaintext';
+                return hljs.highlight(code, { language }).value;
+            }
+        });
+
+        // 渲染所有 Markdown 内容
+        document.querySelectorAll('.raw-markdown').forEach(pre => {
+            const container = pre.nextElementSibling;
+            const rawMarkdown = pre.textContent;
+            
+            // 渲染 Markdown
+            container.innerHTML = marked.parse(rawMarkdown);
+            
+            // 移除原始内容
+            pre.remove();
+        });
+
+        // 自动滚动到底部
+        window.scrollTo(0, document.body.scrollHeight);
+
+        // 配置 MathJax
+        MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']], // 行内公式分隔符
+                displayMath: [['$$', '$$'], ['\\[', '\\]']], // 块级公式分隔符
+                processEscapes: true, // 允许使用 \ 转义
+            },
+            options: {
+                skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre'], // 跳过指定标签
+            },
+            startup: {
+                pageReady: () => {
+                    // 页面加载完成后渲染公式
+                    return MathJax.startup.defaultPageReady();
+                }
+            }
+        };
+    </script>
+</body>
+</html>
 `

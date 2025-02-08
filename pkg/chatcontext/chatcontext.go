@@ -6,6 +6,7 @@ import (
 	"log"
 	"path"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -83,16 +84,18 @@ type DialogNode struct {
 	Id        string `json:"id"`
 	Role      string `json:"role"`
 	Content   string `json:"content"`
+	MessageId int32
 	ReplyTo   *int32
 	Timestamp time.Time
 	Children  []*DialogNode `json:"children"`
 }
 
-func NewDialogNode(id, role, text string, replyTo *int32, timestamp time.Time, children []*DialogNode) *DialogNode {
+func NewDialogNode(id, role, text string, messageId int32, replyTo *int32, timestamp time.Time, children []*DialogNode) *DialogNode {
 	return &DialogNode{
 		Id:        id,
 		Role:      role,
 		Content:   text,
+		MessageId: messageId,
 		ReplyTo:   replyTo,
 		Timestamp: timestamp,
 		Children:  children,
@@ -190,7 +193,12 @@ func (cc ChatContext) buildDialogTrees() ([]*DialogNode, error) {
 			log.Printf("Failed to unmarshal: %v", err)
 			continue
 		}
-		nodeMap[key] = NewDialogNode(path.Dir(key), val.Message.Role, val.Message.Content, val.ReplyTo, val.Timestamp, []*DialogNode{})
+		messageId, err := strconv.Atoi(path.Base(key))
+		if err != nil {
+			log.Printf("Failed to unmarshal: %v", err)
+			continue
+		}
+		nodeMap[key] = NewDialogNode(path.Dir(key), val.Message.Role, val.Message.Content, int32(messageId), val.ReplyTo, val.Timestamp, []*DialogNode{})
 	}
 
 	roots := []*DialogNode{}
