@@ -3,13 +3,15 @@ package providerconfig
 import (
 	"encoding/json"
 	"os"
+	"sync/atomic"
 )
 
 type ProviderConfig struct {
-	Name  string `json:"name"`
-	Url   string `json:"url"`
-	Model string `json:"model,omitempty"`
-	Key   string `json:"key"`
+	Name  string   `json:"name"`
+	Url   string   `json:"url"`
+	Model string   `json:"model,omitempty"`
+	Keys  []string `json:"keys"`
+	index uint64
 }
 
 func LoadProviderConfigFromFile(path string) ([]ProviderConfig, error) {
@@ -25,4 +27,9 @@ func LoadProviderConfigFromFile(path string) ([]ProviderConfig, error) {
 	}
 
 	return config, nil
+}
+
+func (pc ProviderConfig) NextKey() string {
+	idx := atomic.AddUint64(&pc.index, 1) - 1
+	return pc.Keys[int(idx)%len(pc.Keys)]
 }

@@ -8,6 +8,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/vaaandark/qabot/pkg/chatcontext"
@@ -146,16 +147,19 @@ func (c Chatter) chatWithLlm(p providerconfig.ProviderConfig, m messageenvelope.
 		return nil
 	}
 
-	message, err := c.doPost(messages, p.Url, p.Model, p.Key)
+	message, err := c.doPost(messages, p.Url, p.Model, p.NextKey())
 	if err != nil {
-		log.Printf("Failed to do post request to %s: %v", p.Name, err)
 		return err
 	} else if message == nil {
-		log.Print("Empty message")
 		return fmt.Errorf("empty message")
 	}
 
-	m.Text = message.Content
+	content := strings.TrimSpace(message.Content)
+	if len(content) == 0 {
+		return fmt.Errorf("empty message")
+	}
+
+	m.Text = content
 	m.ModelName = p.Name
 	c.ToSendMessageCh <- m
 
