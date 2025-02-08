@@ -2,29 +2,34 @@ package chatter
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/vaaandark/qabot/pkg/chatcontext"
 	"github.com/vaaandark/qabot/pkg/chatter/cmd"
 	"github.com/vaaandark/qabot/pkg/chatter/whitelist"
 	"github.com/vaaandark/qabot/pkg/messageenvelope"
 	"github.com/vaaandark/qabot/pkg/providerconfig"
+	"golang.org/x/sync/semaphore"
 )
 
 type Chatter struct {
+	ctx               context.Context
 	ReceivedMessageCh chan messageenvelope.MessageEnvelope
 	ToSendMessageCh   chan messageenvelope.MessageEnvelope
 	WhitelistAdaptor  whitelist.Whitelist
 	CmdAdaptor        cmd.Cmd
 	ChatContext       *chatcontext.ChatContext
 	Providers         []providerconfig.ProviderConfig
+	MaxConcurrent     *semaphore.Weighted
 }
 
-func NewChatter(receiveMessageCh, toSendMessageCh chan messageenvelope.MessageEnvelope, whitelistFilePath string, chatContext *chatcontext.ChatContext, providers []providerconfig.ProviderConfig) (*Chatter, error) {
+func NewChatter(ctx context.Context, receiveMessageCh, toSendMessageCh chan messageenvelope.MessageEnvelope, whitelistFilePath string, chatContext *chatcontext.ChatContext, providers []providerconfig.ProviderConfig, maxConcurrentNum int64) (*Chatter, error) {
 	wa, err := whitelist.NewWhitelist(whitelistFilePath)
 	if err != nil {
 		return nil, err
@@ -33,12 +38,14 @@ func NewChatter(receiveMessageCh, toSendMessageCh chan messageenvelope.MessageEn
 	ca := cmd.NewCmd(*wa)
 
 	return &Chatter{
+		ctx:               ctx,
 		ReceivedMessageCh: receiveMessageCh,
 		ToSendMessageCh:   toSendMessageCh,
 		WhitelistAdaptor:  *wa,
 		CmdAdaptor:        ca,
 		ChatContext:       chatContext,
 		Providers:         providers,
+		MaxConcurrent:     semaphore.NewWeighted(maxConcurrentNum),
 	}, nil
 }
 
@@ -105,6 +112,14 @@ func (c Chatter) doPost(messages []chatcontext.Message, apiUrl, apiModel, apiKey
 }
 
 func (c Chatter) chatWithLlm(p providerconfig.ProviderConfig, m messageenvelope.MessageEnvelope) error {
+	ctx, cancel := context.WithTimeout(c.ctx, time.Second*10)
+	defer cancel()
+
+	if err := c.MaxConcurrent.Acquire(ctx, 1); err != nil {
+		return err
+	}
+	defer c.MaxConcurrent.Release(1)
+
 	if c.ChatContext == nil {
 		return nil
 	}
@@ -137,7 +152,7 @@ func (c Chatter) chatWithLlm(p providerconfig.ProviderConfig, m messageenvelope.
 		return err
 	} else if message == nil {
 		log.Print("Empty message")
-		return nil
+		return fmt.Errorf("empty message")
 	}
 
 	m.Text = message.Content
@@ -158,7 +173,9 @@ func (c *Chatter) doChat(m messageenvelope.MessageEnvelope) {
 		c.execCmd(m)
 	} else {
 		for _, p := range c.Providers {
-			if err := c.chatWithLlm(p, m); err == nil {
+			if err := c.chatWithLlm(p, m); err != nil {
+				log.Printf("Failed to chat with LLM: %v", err)
+			} else {
 				break
 			}
 		}

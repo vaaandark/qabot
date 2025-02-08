@@ -41,16 +41,19 @@ func main() {
 	dialogAuthConfig := flag.String("dialog-auth-config", "dialog-auth-config.yaml", "查看对话历史记录认证的配置文件")
 	dialogFuzzId := flag.Bool("dialog-fuzz-id", true, "查看对话历史记录时隐藏对话的群 ID 或用户 ID")
 	idMapPath := flag.String("id-map", "id-map.json", "群 id 和群名或用户 id 与用户名对应关系的配置文件")
+	maxConcurrent := flag.Int64("max-concurrent", 5, "向大语言模型提问的最大并发数")
 
 	flag.Parse()
 	log.Printf("Command line args: %s", strings.Join(os.Args, ", "))
 
 	log.Printf("Whitelist path: %s", *whitelist)
 
+	ctx := context.Background()
+
 	*endpoint = addHttpUrlPrefix(*endpoint)
 
-	receivedMessageCh := make(chan messageenvelope.MessageEnvelope, 100)
-	toSendMessageCh := make(chan messageenvelope.MessageEnvelope, 100)
+	receivedMessageCh := make(chan messageenvelope.MessageEnvelope)
+	toSendMessageCh := make(chan messageenvelope.MessageEnvelope)
 
 	db, err := leveldb.OpenFile(*dbPath, nil)
 	if err != nil {
@@ -65,7 +68,7 @@ func main() {
 		log.Panicf("Failed to parse provider config file: %v", err)
 	}
 
-	c, err := chatter.NewChatter(receivedMessageCh, toSendMessageCh, *whitelist, &chatContext, providers)
+	c, err := chatter.NewChatter(ctx, receivedMessageCh, toSendMessageCh, *whitelist, &chatContext, providers, *maxConcurrent)
 	if err != nil {
 		log.Panicf("Failed to init chatter: %v", err)
 	}
