@@ -195,7 +195,7 @@ func NewGroupMessage(dialogBaseUrl string, groupId int64, modelName string, mess
 		message = append(message, TypedMessage{
 			Type: "text",
 			Data: Data{
-				Text: fmt.Sprintf("[%s]\n\n查看最新上下文：%s/group/%d/latest\n查看上下文树：%s/group/%d/all\n\n-----\n\n", modelName, dialogBaseUrl, groupId, dialogBaseUrl, groupId),
+				Text: fmt.Sprintf("\n[%s]\n\n查看最新上下文：%s/group/%d/latest\n查看上下文树：%s/group/%d/all\n\n-----\n\n", modelName, dialogBaseUrl, groupId, dialogBaseUrl, groupId),
 			},
 		})
 	}

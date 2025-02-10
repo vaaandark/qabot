@@ -94,7 +94,8 @@ func (s Sender) doSend(m messageenvelope.MessageEnvelope) {
 	replyTo := strconv.Itoa(int(m.MessageId))
 
 	if m.IsInGroup() {
-		groupMessage := onebot.NewGroupMessage(s.DialogEndpoint, *m.GroupId, m.ModelName, m.Text, nil, &replyTo)
+		userIdStr := strconv.FormatInt(m.UserId, 10)
+		groupMessage := onebot.NewGroupMessage(s.DialogEndpoint, *m.GroupId, m.ModelName, m.Text, &userIdStr, &replyTo)
 		if messageId, err = s.doPost("send_group_msg", groupMessage); err != nil {
 			log.Printf("Failed to send group message: group=%d, id=%d: %v", *m.GroupId, m.UserId, err)
 			return
