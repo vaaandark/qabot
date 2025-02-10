@@ -136,7 +136,7 @@ type GroupMessage struct {
 	Message []TypedMessage `json:"message"`
 }
 
-func NewPrivateMessage(userId int64, modelName string, messageText string, replyTo *string) PrivateMessage {
+func NewPrivateMessage(dialogBaseUrl string, userId int64, modelName string, messageText string, replyTo *string) PrivateMessage {
 	message := []TypedMessage{}
 
 	if replyTo != nil {
@@ -148,10 +148,19 @@ func NewPrivateMessage(userId int64, modelName string, messageText string, reply
 		})
 	}
 
+	if len(modelName) != 0 {
+		message = append(message, TypedMessage{
+			Type: "text",
+			Data: Data{
+				Text: fmt.Sprintf("[%s]\n\n查看最新上下文：%s/user/%d/latest\n查看上下文树：%s/user/%d/all\n\n-----\n\n", modelName, dialogBaseUrl, userId, dialogBaseUrl, userId),
+			},
+		})
+	}
+
 	message = append(message, TypedMessage{
 		Type: "text",
 		Data: Data{
-			Text: fmt.Sprintf("[%s]\n\n-----\n\n%s", modelName, messageText),
+			Text: messageText,
 		},
 	})
 
@@ -161,7 +170,7 @@ func NewPrivateMessage(userId int64, modelName string, messageText string, reply
 	}
 }
 
-func NewGroupMessage(groupId int64, modelName string, messageText string, at *string, replyTo *string) GroupMessage {
+func NewGroupMessage(dialogBaseUrl string, groupId int64, modelName string, messageText string, at *string, replyTo *string) GroupMessage {
 	message := []TypedMessage{}
 
 	if replyTo != nil {
@@ -182,10 +191,19 @@ func NewGroupMessage(groupId int64, modelName string, messageText string, at *st
 		})
 	}
 
+	if len(modelName) != 0 {
+		message = append(message, TypedMessage{
+			Type: "text",
+			Data: Data{
+				Text: fmt.Sprintf("[%s]\n\n查看最新上下文：%s/group/%d/latest\n查看上下文树：%s/group/%d/all\n\n-----\n\n", modelName, dialogBaseUrl, groupId, dialogBaseUrl, groupId),
+			},
+		})
+	}
+
 	message = append(message, TypedMessage{
 		Type: "text",
 		Data: Data{
-			Text: fmt.Sprintf("[%s]\n\n-----\n\n%s", modelName, messageText),
+			Text: messageText,
 		},
 	})
 

@@ -20,13 +20,15 @@ type Sender struct {
 	ToSendMessageCh chan messageenvelope.MessageEnvelope
 	ChatContext     chatcontext.ChatContext
 	Endpoint        string
+	DialogEndpoint  string
 }
 
-func NewSender(toSendMessageCh chan messageenvelope.MessageEnvelope, chatContext chatcontext.ChatContext, endpoint string) Sender {
+func NewSender(toSendMessageCh chan messageenvelope.MessageEnvelope, chatContext chatcontext.ChatContext, endpoint, dialogEndpoint string) Sender {
 	return Sender{
 		ToSendMessageCh: toSendMessageCh,
 		ChatContext:     chatContext,
 		Endpoint:        endpoint,
+		DialogEndpoint:  dialogEndpoint,
 	}
 }
 
@@ -92,13 +94,13 @@ func (s Sender) doSend(m messageenvelope.MessageEnvelope) {
 	replyTo := strconv.Itoa(int(m.MessageId))
 
 	if m.IsInGroup() {
-		groupMessage := onebot.NewGroupMessage(*m.GroupId, m.ModelName, m.Text, nil, &replyTo)
+		groupMessage := onebot.NewGroupMessage(s.DialogEndpoint, *m.GroupId, m.ModelName, m.Text, nil, &replyTo)
 		if messageId, err = s.doPost("send_group_msg", groupMessage); err != nil {
 			log.Printf("Failed to send group message: group=%d, id=%d: %v", *m.GroupId, m.UserId, err)
 			return
 		}
 	} else {
-		privateMessage := onebot.NewPrivateMessage(m.UserId, m.ModelName, m.Text, &replyTo)
+		privateMessage := onebot.NewPrivateMessage(s.DialogEndpoint, m.UserId, m.ModelName, m.Text, &replyTo)
 		if messageId, err = s.doPost("send_private_msg", privateMessage); err != nil {
 			log.Printf("Failed to send private message: id=%d: %v", m.UserId, err)
 			return
@@ -111,6 +113,9 @@ func (s Sender) doSend(m messageenvelope.MessageEnvelope) {
 
 	// 不是命令回复才存档
 	if !m.IsCmd {
+		if messageId == 0 { // 被 QQ 拦截了，手动给它一个不会重复的值
+			messageId = -int32(time.Now().UnixMicro())
+		}
 		if err := s.recordSent(messageId, m); err != nil {
 			log.Printf("Failed to add user context: %v", err)
 		}

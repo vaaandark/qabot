@@ -37,7 +37,8 @@ func main() {
 	privatePrompt := flag.String("private-prompt", "", "私聊中给大语言模型的提示词")
 	groupPrompt := flag.String("group-prompt", "", "群聊中给大语言模型的提示词")
 	dbPath := flag.String("db", "context.db", "持久化存储上下文")
-	dialogEndpoint := flag.String("dialog-endpoint", "127.0.0.1:6060", "查看对话历史记录的地址")
+	dialogEndpoint := flag.String("dialog-endpoint", "127.0.0.1:6060", "上报对话历史记录的地址")
+	dialogUrlBase := flag.String("dialog-url-base", "127.0.0.1:6060", "查看对话历史记录的 URL")
 	dialogAuthConfig := flag.String("dialog-auth-config", "dialog-auth-config.yaml", "查看对话历史记录认证的配置文件")
 	dialogFuzzId := flag.Bool("dialog-fuzz-id", true, "查看对话历史记录时隐藏对话的群 ID 或用户 ID")
 	idMapPath := flag.String("id-map", "id-map.json", "群 id 和群名或用户 id 与用户名对应关系的配置文件")
@@ -72,7 +73,11 @@ func main() {
 	if err != nil {
 		log.Panicf("Failed to init chatter: %v", err)
 	}
-	s := sender.NewSender(toSendMessageCh, chatContext, *endpoint)
+
+	if len(*dialogUrlBase) == 0 {
+		*dialogUrlBase = *dialogEndpoint
+	}
+	s := sender.NewSender(toSendMessageCh, chatContext, *endpoint, *dialogUrlBase)
 
 	stopCh := util.SetupSignalHandler()
 

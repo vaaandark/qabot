@@ -1,6 +1,7 @@
 package chatcontext
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -120,7 +121,7 @@ type Dialogs struct {
 	IndexedDialogTreesmap map[string][]*DialogNode
 }
 
-func (cc ChatContext) BuildIndexedDialogTrees(fuzzId bool, all bool, allowed []string, welcome string, idMap idmap.IdMap) (*Dialogs, error) {
+func (cc ChatContext) BuildIndexedDialogTrees(fuzzId bool, all bool, allowed []string, welcome string, idMap idmap.IdMap, specificId *string) (*Dialogs, error) {
 	var allowedMap map[string]struct{}
 	if !all {
 		allowedMap = make(map[string]struct{})
@@ -139,6 +140,11 @@ func (cc ChatContext) BuildIndexedDialogTrees(fuzzId bool, all bool, allowed []s
 		id := root.Id
 		if !all {
 			if _, exist := allowedMap[id]; !exist {
+				continue
+			}
+		}
+		if specificId != nil {
+			if *specificId != id {
 				continue
 			}
 		}
@@ -234,6 +240,37 @@ func (cc ChatContext) AddContextNode(userId, groupId *int64, messageId int32, re
 	return cc.db.Put(key, val, nil)
 }
 
+func (cc ChatContext) lookupLatestMessageId(userId, groupId *int64) *int32 {
+	iter := cc.db.NewIterator(nil, nil)
+	defer iter.Release()
+
+	start := []byte(path.Dir(string(NewContextNodeKey(userId, groupId, 0).Key())))
+	end := bytes.Clone(start)
+	end[len(end)-1] += 1
+
+	latestTimestamp := time.Unix(0, 0)
+	var messageId *int32
+	for iter.Seek(start); iter.Valid() && bytes.Compare(iter.Key(), end) < 0; iter.Next() {
+		var val ContextNodeValue
+		if err := json.Unmarshal(iter.Value(), &val); err != nil {
+			log.Printf("Failed to unmarshal: %v", err)
+			continue
+		}
+		if val.Timestamp.After(latestTimestamp) {
+			latestTimestamp = val.Timestamp
+			n, err := strconv.ParseInt(path.Base(string(iter.Key())), 10, 32)
+			if err != nil {
+				log.Printf("Failed to parse number: %v", err)
+				continue
+			}
+			n32 := int32(n)
+			messageId = &n32
+		}
+	}
+
+	return messageId
+}
+
 func (cc ChatContext) lookupContextNode(userId, groupId *int64, messageId int32) (*ContextNodeValue, error) {
 	key := NewContextNodeKey(userId, groupId, messageId).Key()
 	b, err := cc.db.Get(key, nil)
@@ -246,6 +283,14 @@ func (cc ChatContext) lookupContextNode(userId, groupId *int64, messageId int32)
 		return nil, err
 	}
 	return val, nil
+}
+
+func (cc ChatContext) LoadContextLatestMessages(userId, groupId *int64) ([]Message, error) {
+	latestMessageId := cc.lookupLatestMessageId(userId, groupId)
+	if latestMessageId == nil {
+		return nil, fmt.Errorf("latest message not exist")
+	}
+	return cc.LoadContextMessages(userId, groupId, *latestMessageId)
 }
 
 func (cc ChatContext) LoadContextMessages(userId, groupId *int64, messageId int32) ([]Message, error) {

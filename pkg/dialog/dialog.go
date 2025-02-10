@@ -55,15 +55,59 @@ func NewDialogHtmlBuilder(chatContext chatcontext.ChatContext, auth *Auth, fuzzI
 	}
 }
 
-func (dhb DialogHtmlBuilder) buildDialogTreeHtml(w http.ResponseWriter, all bool, user *User) error {
+func (dhb DialogHtmlBuilder) buildDialogTreeHtml(w http.ResponseWriter, all bool, user *User, specificId *string) error {
 	if user == nil {
 		return fmt.Errorf("User is not found")
 	}
-	indexedDialogTrees, err := dhb.ChatContext.BuildIndexedDialogTrees(dhb.FuzzId, all, user.Allowed, user.Welcome, dhb.IdMap)
+	indexedDialogTrees, err := dhb.ChatContext.BuildIndexedDialogTrees(dhb.FuzzId, all, user.Allowed, user.Welcome, dhb.IdMap, specificId)
 	if err != nil {
 		return err
 	}
+
 	return dialogTreeHtmlTmpl.Execute(w, indexedDialogTrees)
+}
+
+func parseId(key string) (userId, groupId *int64, messageId *int32, err error) {
+	splited := strings.Split(key, "/")
+	if len(splited) != 3 {
+		err = fmt.Errorf("bad path")
+		return
+	}
+
+	userOrGroup := splited[0]
+	var id int64
+	if userOrGroup == "user" {
+		id, err = strconv.ParseInt(splited[1], 10, 64)
+		if err != nil {
+			return
+		}
+		userId = &id
+	} else if userOrGroup == "group" {
+		id, err = strconv.ParseInt(splited[1], 10, 64)
+		if err != nil {
+			return
+		}
+		groupId = &id
+	} else {
+		err = fmt.Errorf("bad path")
+	}
+
+	if n, err := strconv.ParseInt(splited[2], 10, 32); err == nil {
+		n32 := int32(n)
+		messageId = &n32
+	}
+
+	return
+}
+
+func (dhb DialogHtmlBuilder) buildDialogSingleTreeHtml(w http.ResponseWriter, key string, all bool, user *User) error {
+	if user == nil {
+		return fmt.Errorf("User is not found")
+	}
+
+	id := path.Dir(key)
+
+	return dhb.buildDialogTreeHtml(w, all, user, &id)
 }
 
 func (dhb DialogHtmlBuilder) buildDialogListHtml(w http.ResponseWriter, key string, all bool, user *User) error {
@@ -71,30 +115,7 @@ func (dhb DialogHtmlBuilder) buildDialogListHtml(w http.ResponseWriter, key stri
 		return fmt.Errorf("User is not found")
 	}
 
-	splited := strings.Split(key, "/")
-	if len(splited) != 3 {
-		return fmt.Errorf("bad path")
-	}
-
-	userOrGroup := splited[0]
-	var userId, groupId *int64
-	if userOrGroup == "user" {
-		id, err := strconv.ParseInt(splited[1], 10, 64)
-		if err != nil {
-			return err
-		}
-		userId = &id
-	} else if userOrGroup == "group" {
-		id, err := strconv.ParseInt(splited[1], 10, 64)
-		if err != nil {
-			return err
-		}
-		groupId = &id
-	} else {
-		return fmt.Errorf("bad path")
-	}
-
-	messageId, err := strconv.Atoi(splited[2])
+	userId, groupId, messageId, err := parseId(key)
 	if err != nil {
 		return err
 	}
@@ -112,9 +133,19 @@ func (dhb DialogHtmlBuilder) buildDialogListHtml(w http.ResponseWriter, key stri
 		return fmt.Errorf("no permission")
 	}
 
-	messages, err := dhb.ChatContext.LoadContextMessages(userId, groupId, int32(messageId))
-	if err != nil {
-		return err
+	var messages []chatcontext.Message
+
+	if messageId != nil {
+		messages, err = dhb.ChatContext.LoadContextMessages(userId, groupId, *messageId)
+		if err != nil {
+			return err
+		}
+	} else if path.Base(key) == "latest" {
+		var err error
+		messages, err = dhb.ChatContext.LoadContextLatestMessages(userId, groupId)
+		if err != nil {
+			return err
+		}
 	}
 
 	return dialogListHtmlTmpl.Execute(w, messages)
@@ -137,12 +168,18 @@ func (dhb DialogHtmlBuilder) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	splited := strings.SplitN(r.URL.Path, "/", 2)
 	if len(splited) < 2 || len(splited[1]) == 0 {
-		if err := dhb.buildDialogTreeHtml(w, all, user); err != nil {
+		if err := dhb.buildDialogTreeHtml(w, all, user, nil); err != nil {
 			http.Error(w, fmt.Sprintf("Failed to build dialog tree html: %v", err), http.StatusInternalServerError)
 		}
 	} else {
-		if err := dhb.buildDialogListHtml(w, splited[1], all, user); err != nil {
-			http.Error(w, fmt.Sprintf("Failed to build dialog list html: %v", err), http.StatusInternalServerError)
+		if path.Base(splited[1]) == "all" {
+			if err := dhb.buildDialogSingleTreeHtml(w, splited[1], all, user); err != nil {
+				http.Error(w, fmt.Sprintf("Failed to build dialog single tree html: %v", err), http.StatusInternalServerError)
+			}
+		} else {
+			if err := dhb.buildDialogListHtml(w, splited[1], all, user); err != nil {
+				http.Error(w, fmt.Sprintf("Failed to build dialog list html: %v", err), http.StatusInternalServerError)
+			}
 		}
 	}
 }
