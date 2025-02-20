@@ -183,19 +183,17 @@ func NewGroupMessage(dialogBaseUrl string, groupId int64, modelName string, mess
 	}
 
 	if at != nil {
-		message = append(message, TypedMessage{
-			Type: "at",
-			Data: Data{
-				Qq: *at,
-			},
-		})
+		message = append(message,
+			TypedMessage{Type: "at", Data: Data{Qq: *at}},
+			TypedMessage{Type: "text", Data: Data{Text: " "}},
+		)
 	}
 
 	if len(modelName) != 0 {
 		message = append(message, TypedMessage{
 			Type: "text",
 			Data: Data{
-				Text: fmt.Sprintf("\n[%s]\n\n查看最新上下文：%s/group/%d/latest\n查看上下文树：%s/group/%d/all\n\n-----\n\n", modelName, dialogBaseUrl, groupId, dialogBaseUrl, groupId),
+				Text: fmt.Sprintf("[%s]\n\n查看最新上下文：%s/group/%d/latest\n查看上下文树：%s/group/%d/all\n\n-----\n\n", modelName, dialogBaseUrl, groupId, dialogBaseUrl, groupId),
 			},
 		})
 	}
