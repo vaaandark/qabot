@@ -8,7 +8,7 @@ Restart=on-failure
 RestartSec=5s
 LimitNOFILE=1048576
 EnvironmentFile=-/etc/qabot/config
-ExecStart=/usr/local/bin/qabot ${DIALOG_ENDPOINT} ${DIALOG_AUTH_CONFIG} ${WHITELIST} ${MODEL} ${API_KEY} ${API_URL} ${DB} ${ENDPOINT} ${EVENT_ENDPOINT} ${ID_MAP}
+ExecStart=/usr/local/bin/qabot ${DIALOG_ENDPOINT} ${DIALOG_URL_BASE} ${DIALOG_AUTH_CONFIG} ${WHITELIST} ${PROVIDER_CONFIG} ${DB} ${ENDPOINT} ${EVENT_ENDPOINT} ${ID_MAP}
 
 [Install]
 WantedBy=default.target

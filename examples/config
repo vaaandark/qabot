@@ -1,9 +1,10 @@
-API_KEY="--api-key=sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-API_URL="--api-url=https://api.deepseek.com/chat/completions"
 DB="--db=/var/run/qabot/leveldb"
 ENDPOINT="--endpoint=http://127.0.0.1:3000"
 EVENT_ENDPOINT="--event-endpoint=127.0.0.1:8080"
-MODEL="--model=deepseek-reasoner"
 WHITELIST="--whitelist=/etc/qabot/whitelist.json"
 DIALOG_ENDPOINT="--dialog-endpoint=0.0.0.0:6060"
+DIALOG_URL_BASE="--dialog-url-base=http://<你的公网IP>:6060"
 DIALOG_AUTH_CONFIG="--dialog-auth-config=/etc/qabot/dialog-auth-config.json"
+ID_MAP="--id-map=/etc/qabot/id-map.json"
+PROVIDER_CONFIG="--provider-config=/etc/qabot/provider-config.json"
+
