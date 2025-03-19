@@ -136,6 +136,73 @@ type GroupMessage struct {
 	Message []TypedMessage `json:"message"`
 }
 
+type GroupForwardMessage struct {
+	GroupId  int64            `json:"group_id"`
+	Messages []ForwardMessage `json:"messages"`
+}
+
+type PrivateForwardMessage struct {
+	UserId   int64            `json:"user_id"`
+	Messages []ForwardMessage `json:"messages"`
+}
+
+type ForwardMessage struct {
+	Type string             `json:"type"`
+	Data ForwardMessageData `json:"data"`
+}
+
+type ForwardMessageData struct {
+	UserId   int64          `json:"user_id"`
+	Nickname string         `json:"nickname"`
+	Content  []TypedMessage `json:"content"`
+}
+
+func NewPrivateForwordMessage(userId int64, messageText string) PrivateForwardMessage {
+	return PrivateForwardMessage{
+		UserId: userId,
+		Messages: []ForwardMessage{
+			{
+				Type: "node",
+				Data: ForwardMessageData{
+					UserId:   0,
+					Nickname: "QQ用户",
+					Content: []TypedMessage{
+						{
+							Type: "text",
+							Data: Data{
+								Text: messageText,
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
+func NewGroupForwordMessage(groupId int64, messageText string) GroupForwardMessage {
+	return GroupForwardMessage{
+		GroupId: groupId,
+		Messages: []ForwardMessage{
+			{
+				Type: "node",
+				Data: ForwardMessageData{
+					UserId:   0,
+					Nickname: "QQ用户",
+					Content: []TypedMessage{
+						{
+							Type: "text",
+							Data: Data{
+								Text: messageText,
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
 func NewPrivateMessage(dialogBaseUrl string, userId int64, modelName string, messageText string, replyTo *string) PrivateMessage {
 	message := []TypedMessage{}
 
@@ -152,7 +219,7 @@ func NewPrivateMessage(dialogBaseUrl string, userId int64, modelName string, mes
 		message = append(message, TypedMessage{
 			Type: "text",
 			Data: Data{
-				Text: fmt.Sprintf("[%s]\n\n", modelName),
+				Text: fmt.Sprintf("[%s]\n", modelName),
 			},
 		})
 	}
@@ -193,7 +260,7 @@ func NewGroupMessage(dialogBaseUrl string, groupId int64, modelName string, mess
 		message = append(message, TypedMessage{
 			Type: "text",
 			Data: Data{
-				Text: fmt.Sprintf("[%s]\n\n", modelName),
+				Text: fmt.Sprintf("[%s]\n", modelName),
 			},
 		})
 	}

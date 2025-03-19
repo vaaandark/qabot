@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/vaaandark/qabot/pkg/chatcontext"
@@ -88,20 +89,45 @@ func (s Sender) recordSent(messageId int32, m messageenvelope.MessageEnvelope) e
 	}, m.Timestamp)
 }
 
+func splitThinkAndAnswer(text string) (string, string) {
+	thinkLable := "</think>"
+	if !strings.Contains(text, thinkLable) {
+		return "", text
+	}
+	// 根据 </think> 分割
+	before, after, _ := strings.Cut(text, thinkLable)
+	before = strings.TrimSpace(before)
+	after = strings.TrimSpace(after)
+	return before, after
+}
+
 func (s Sender) doSend(m messageenvelope.MessageEnvelope) {
 	var messageId int32
 	var err error
 	replyTo := strconv.Itoa(int(m.MessageId))
 
+	think, answer := splitThinkAndAnswer(m.Text)
 	if m.IsInGroup() {
 		userIdStr := strconv.FormatInt(m.UserId, 10)
-		groupMessage := onebot.NewGroupMessage(s.DialogEndpoint, *m.GroupId, m.ModelName, m.Text, &userIdStr, &replyTo)
+		if len(think) != 0 {
+			forwardMessage := onebot.NewGroupForwordMessage(*m.GroupId, think)
+			if _, err = s.doPost("send_group_forward_msg", forwardMessage); err != nil {
+				log.Printf("Failed to send group forward message: group=%d, id=%d: %v", *m.GroupId, m.UserId, err)
+			}
+		}
+		groupMessage := onebot.NewGroupMessage(s.DialogEndpoint, *m.GroupId, m.ModelName, answer, &userIdStr, &replyTo)
 		if messageId, err = s.doPost("send_group_msg", groupMessage); err != nil {
 			log.Printf("Failed to send group message: group=%d, id=%d: %v", *m.GroupId, m.UserId, err)
 			return
 		}
 	} else {
-		privateMessage := onebot.NewPrivateMessage(s.DialogEndpoint, m.UserId, m.ModelName, m.Text, &replyTo)
+		if len(think) != 0 {
+			forwardMessage := onebot.NewPrivateForwordMessage(m.UserId, think)
+			if _, err = s.doPost("send_private_forward_msg", forwardMessage); err != nil {
+				log.Printf("Failed to send private forward message: id=%d: %v", m.UserId, err)
+			}
+		}
+		privateMessage := onebot.NewPrivateMessage(s.DialogEndpoint, m.UserId, m.ModelName, answer, &replyTo)
 		if messageId, err = s.doPost("send_private_msg", privateMessage); err != nil {
 			log.Printf("Failed to send private message: id=%d: %v", m.UserId, err)
 			return
