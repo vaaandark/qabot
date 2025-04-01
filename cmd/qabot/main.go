@@ -34,8 +34,8 @@ func main() {
 	endpoint := flag.String("endpoint", "http://127.0.0.1:3000", "请求地址")
 	whitelist := flag.String("whitelist", "whitelist.json", "白名单文件路径（白名单文件可热更新）")
 	providerConfig := flag.String("provider-config", "provider-config.json", "大语言模型提供商配置文件")
-	privatePrompt := flag.String("private-prompt", "", "私聊中给大语言模型的提示词")
-	groupPrompt := flag.String("group-prompt", "", "群聊中给大语言模型的提示词")
+	privatePromptPath := flag.String("private-prompt", "", "私聊中给大语言模型的提示词路径")
+	groupPromptPath := flag.String("group-prompt", "", "群聊中给大语言模型的提示词路径")
 	dbPath := flag.String("db", "context.db", "持久化存储上下文")
 	dialogEndpoint := flag.String("dialog-endpoint", "127.0.0.1:6060", "上报对话历史记录的地址")
 	dialogUrlBase := flag.String("dialog-url-base", "127.0.0.1:6060", "查看对话历史记录的 URL")
@@ -62,14 +62,17 @@ func main() {
 	}
 	defer db.Close()
 
-	chatContext := chatcontext.NewChatContext(db, *privatePrompt, *groupPrompt)
+	chatContext, err := chatcontext.NewChatContext(db, *privatePromptPath, *groupPromptPath)
+	if err != nil {
+		log.Panicf("Failed to init chat context: %v", err)
+	}
 
 	providers, err := providerconfig.LoadProviderConfigFromFile(*providerConfig)
 	if err != nil {
 		log.Panicf("Failed to parse provider config file: %v", err)
 	}
 
-	c, err := chatter.NewChatter(ctx, receivedMessageCh, toSendMessageCh, *whitelist, &chatContext, providers, *maxConcurrent)
+	c, err := chatter.NewChatter(ctx, receivedMessageCh, toSendMessageCh, *whitelist, chatContext, providers, *maxConcurrent)
 	if err != nil {
 		log.Panicf("Failed to init chatter: %v", err)
 	}
@@ -77,7 +80,7 @@ func main() {
 	if len(*dialogUrlBase) == 0 {
 		*dialogUrlBase = *dialogEndpoint
 	}
-	s := sender.NewSender(toSendMessageCh, chatContext, *endpoint, *dialogUrlBase)
+	s := sender.NewSender(toSendMessageCh, *chatContext, *endpoint, *dialogUrlBase)
 
 	stopCh := util.SetupSignalHandler()
 
@@ -105,7 +108,7 @@ func main() {
 			return http.ListenAndServe(*dialogEndpoint,
 				dialog.RateLimiter(
 					dialog.BasicAuth(auth,
-						dialog.NewDialogHtmlBuilder(chatContext, auth, *dialogFuzzId, *idMap))))
+						dialog.NewDialogHtmlBuilder(*chatContext, auth, *dialogFuzzId, *idMap))))
 		})
 	}
 

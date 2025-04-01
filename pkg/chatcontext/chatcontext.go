@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"os"
 	"path"
 	"sort"
 	"strconv"
@@ -77,8 +78,8 @@ func (ck ContextNodeKey) Key() []byte {
 
 type ChatContext struct {
 	db            *leveldb.DB
-	privatePrompt string
-	groupPrompt   string
+	privatePrompt []Message
+	groupPrompt   []Message
 }
 
 type DialogNode struct {
@@ -215,12 +216,33 @@ func (cc ChatContext) buildDialogTrees() ([]*DialogNode, error) {
 	return roots, nil
 }
 
-func NewChatContext(db *leveldb.DB, privatePrompt, groupPrompt string) ChatContext {
-	return ChatContext{
+func loadSystemPrompt(path string) ([]Message, error) {
+	b, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+
+	var messages []Message
+	if err := json.Unmarshal(b, &messages); err != nil {
+		return nil, err
+	}
+	return messages, nil
+}
+
+func NewChatContext(db *leveldb.DB, privatePromptPath, groupPromptPath string) (*ChatContext, error) {
+	privatePrompt, err := loadSystemPrompt(privatePromptPath)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to load private prompt: %w", err)
+	}
+	groupPrompt, err := loadSystemPrompt(groupPromptPath)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to load group prompt: %w", err)
+	}
+	return &ChatContext{
 		db:            db,
 		privatePrompt: privatePrompt,
 		groupPrompt:   groupPrompt,
-	}
+	}, nil
 }
 
 func (cc ChatContext) IsBotReply(userId, groupId *int64, messageId int32) bool {
@@ -311,17 +333,11 @@ func (cc ChatContext) LoadContextMessages(userId, groupId *int64, messageId int3
 
 	if groupId != nil {
 		if len(cc.groupPrompt) != 0 {
-			messages = append(messages, Message{
-				Role:    "system",
-				Content: cc.groupPrompt,
-			})
+			messages = append(messages, cc.groupPrompt...)
 		}
 	} else {
 		if len(cc.privatePrompt) != 0 {
-			messages = append(messages, Message{
-				Role:    "system",
-				Content: cc.privatePrompt,
-			})
+			messages = append(messages, cc.privatePrompt...)
 		}
 	}
 
