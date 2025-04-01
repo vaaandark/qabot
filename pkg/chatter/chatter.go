@@ -75,7 +75,21 @@ func (c Chatter) Run(stopCh <-chan struct{}) {
 	}
 }
 
-func (c Chatter) doPost(messages []chatcontext.Message, apiUrl, apiModel, apiKey string) (*chatcontext.Message, error) {
+func (c Chatter) doPost(messages []chatcontext.Message, provider *providerconfig.ProviderConfig) (*chatcontext.Message, error) {
+	if provider == nil {
+		return nil, fmt.Errorf("empty provider")
+	}
+
+	apiUrl := provider.Url
+	apiModel := provider.Model
+	apiKey := provider.NextKey()
+
+	if provider.Reasoning && len(messages) > 0 {
+		thinkLabel := "<think>"
+		content := messages[len(messages)-1].Content
+		messages[len(messages)-1].Content = content + thinkLabel
+	}
+
 	request := CompletionRequestFromContext(apiModel, messages)
 
 	requestBytes, err := json.Marshal(request)
@@ -147,7 +161,7 @@ func (c Chatter) chatWithLlm(p providerconfig.ProviderConfig, m messageenvelope.
 		return nil
 	}
 
-	message, err := c.doPost(messages, p.Url, p.Model, p.NextKey())
+	message, err := c.doPost(messages, &p)
 	if err != nil {
 		return err
 	} else if message == nil {

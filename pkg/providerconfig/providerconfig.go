@@ -7,11 +7,12 @@ import (
 )
 
 type ProviderConfig struct {
-	Name  string   `json:"name"`
-	Url   string   `json:"url"`
-	Model string   `json:"model,omitempty"`
-	Keys  []string `json:"keys"`
-	index uint64
+	Name      string   `json:"name"`
+	Url       string   `json:"url"`
+	Model     string   `json:"model,omitempty"`
+	Reasoning bool     `json:"reasoning,omitempty"`
+	Keys      []string `json:"keys"`
+	index     uint64
 }
 
 func LoadProviderConfigFromFile(path string) ([]ProviderConfig, error) {
