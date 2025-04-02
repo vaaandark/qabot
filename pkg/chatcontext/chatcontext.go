@@ -78,8 +78,8 @@ func (ck ContextNodeKey) Key() []byte {
 
 type ChatContext struct {
 	db            *leveldb.DB
-	privatePrompt []Message
-	groupPrompt   []Message
+	PrivatePrompt []Message
+	GroupPrompt   []Message
 }
 
 type DialogNode struct {
@@ -240,8 +240,8 @@ func NewChatContext(db *leveldb.DB, privatePromptPath, groupPromptPath string) (
 	}
 	return &ChatContext{
 		db:            db,
-		privatePrompt: privatePrompt,
-		groupPrompt:   groupPrompt,
+		PrivatePrompt: privatePrompt,
+		GroupPrompt:   groupPrompt,
 	}, nil
 }
 
@@ -315,6 +315,13 @@ func (cc ChatContext) LoadContextLatestMessages(userId, groupId *int64) ([]Messa
 	return cc.LoadContextMessages(userId, groupId, *latestMessageId)
 }
 
+func BuildNicknamePrompt(nickname string) Message {
+	return Message{
+		Role:    "system",
+		Content: fmt.Sprintf("正在和你对话的用户是 %s", nickname),
+	}
+}
+
 func (cc ChatContext) LoadContextMessages(userId, groupId *int64, messageId int32) ([]Message, error) {
 	reversedMessages := []Message{}
 	for {
@@ -329,18 +336,7 @@ func (cc ChatContext) LoadContextMessages(userId, groupId *int64, messageId int3
 		messageId = *val.ReplyTo
 	}
 
-	messages := make([]Message, 0, len(reversedMessages)+1)
-
-	if groupId != nil {
-		if len(cc.groupPrompt) != 0 {
-			messages = append(messages, cc.groupPrompt...)
-		}
-	} else {
-		if len(cc.privatePrompt) != 0 {
-			messages = append(messages, cc.privatePrompt...)
-		}
-	}
-
+	messages := make([]Message, 0, len(reversedMessages))
 	for i := len(reversedMessages) - 1; i >= 0; i-- {
 		messages = append(messages, reversedMessages[i])
 	}

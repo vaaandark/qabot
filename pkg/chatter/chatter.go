@@ -155,11 +155,22 @@ func (c Chatter) chatWithLlm(p providerconfig.ProviderConfig, m messageenvelope.
 		return nil
 	}
 
+	var systemPrompt []chatcontext.Message
+	if m.GroupId != nil {
+		systemPrompt = c.ChatContext.GroupPrompt
+	} else {
+		systemPrompt = c.ChatContext.PrivatePrompt
+	}
+	if m.Nickname != "" {
+		systemPrompt = append(systemPrompt, chatcontext.BuildNicknamePrompt(m.Nickname))
+	}
+
 	messages, err := c.ChatContext.LoadContextMessages(&m.UserId, m.GroupId, m.MessageId)
 	if err != nil {
 		log.Printf("Failed to load context: %v", err)
 		return nil
 	}
+	messages = append(systemPrompt, messages...)
 
 	message, err := c.doPost(messages, &p)
 	if err != nil {
