@@ -15,6 +15,7 @@ import (
 	"github.com/vaaandark/qabot/pkg/chatter/cmd"
 	"github.com/vaaandark/qabot/pkg/chatter/whitelist"
 	"github.com/vaaandark/qabot/pkg/messageenvelope"
+	"github.com/vaaandark/qabot/pkg/onebot"
 	"github.com/vaaandark/qabot/pkg/providerconfig"
 	"golang.org/x/sync/semaphore"
 )
@@ -58,13 +59,15 @@ func (c Chatter) Run(stopCh <-chan struct{}) {
 				return
 			}
 
-			if m.IsInGroup() {
-				if !c.WhitelistAdaptor.HasGroup(*m.GroupId) {
-					continue
-				}
-			} else {
-				if !c.WhitelistAdaptor.HasUser(m.UserId) {
-					continue
+			if m.Category == onebot.CategoryCmd || m.Category == onebot.CategoryChat {
+				if m.IsInGroup() {
+					if !c.WhitelistAdaptor.HasGroup(*m.GroupId) {
+						continue
+					}
+				} else {
+					if !c.WhitelistAdaptor.HasUser(m.UserId) {
+						continue
+					}
 				}
 			}
 
@@ -197,10 +200,16 @@ func (c *Chatter) execCmd(m messageenvelope.MessageEnvelope) {
 	c.ToSendMessageCh <- m
 }
 
+func (c *Chatter) extractShare(m messageenvelope.MessageEnvelope) {
+	c.ToSendMessageCh <- m
+}
+
 func (c *Chatter) doChat(m messageenvelope.MessageEnvelope) {
-	if m.IsCmd {
+	if m.Category == onebot.CategoryCmd {
 		c.execCmd(m)
-	} else {
+	} else if m.Category == onebot.CategoryShare {
+		c.extractShare(m)
+	} else if m.Category == onebot.CategoryChat {
 		for _, p := range c.Providers {
 			if err := c.chatWithLlm(p, m); err != nil {
 				log.Printf("Failed to chat with LLM: %v", err)

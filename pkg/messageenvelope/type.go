@@ -17,7 +17,7 @@ type MessageEnvelope struct {
 	MessageId  int32
 	ReplyTo    *int32
 	IsFromSelf bool
-	IsCmd      bool
+	Category   onebot.MessageCategory
 	IsAt       bool
 	Timestamp  time.Time
 	ModelName  string
@@ -37,7 +37,7 @@ func (m MessageEnvelope) GetNamespacedGroupOrUserID() string {
 	}
 }
 
-func FromEvent(event onebot.Event, text *string, replyTo *int32, isCmd, isAt bool) MessageEnvelope {
+func FromEvent(event onebot.Event, text *string, replyTo *int32, category onebot.MessageCategory, isAt bool) MessageEnvelope {
 	m := MessageEnvelope{
 		Nickname:   event.Sender.Nickname,
 		UserId:     event.UserId,
@@ -47,7 +47,7 @@ func FromEvent(event onebot.Event, text *string, replyTo *int32, isCmd, isAt boo
 		MessageId:  event.MessageId,
 		ReplyTo:    replyTo,
 		IsFromSelf: event.IsFromSelf(),
-		IsCmd:      isCmd,
+		Category:   category,
 		IsAt:       isAt,
 		Timestamp:  time.Now(),
 	}

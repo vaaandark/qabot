@@ -39,8 +39,8 @@ func (receiver Receiver) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if event.IsMessage() {
-		if text, replyTo, shouldBeIgnored, isCmd, isAt := event.ProcessText(); !shouldBeIgnored {
-			me := messageenvelope.FromEvent(event, &text, replyTo, isCmd, isAt)
+		if text, replyTo, shouldBeIgnored, category, isAt := event.ProcessText(); !shouldBeIgnored {
+			me := messageenvelope.FromEvent(event, &text, replyTo, category, isAt)
 			log.Printf("Receive message from %s: %s", me.GetNamespacedGroupOrUserID(), util.TruncateLogStr(me.Text))
 			receiver.ReceivedMessageCh <- me
 		}

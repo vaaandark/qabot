@@ -138,8 +138,7 @@ func (s Sender) doSend(m messageenvelope.MessageEnvelope) {
 	log.Printf("Cost %s to send message to %s: %s", timestamp.Sub(m.Timestamp), m.GetNamespacedGroupOrUserID(), util.TruncateLogStr(m.Text))
 	m.Timestamp = timestamp
 
-	// 不是命令回复才存档
-	if !m.IsCmd {
+	if m.Category == onebot.CategoryChat {
 		if messageId == 0 { // 被 QQ 拦截了，手动给它一个不会重复的值
 			messageId = -int32(time.Now().UnixMicro())
 		}

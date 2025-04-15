@@ -1,9 +1,20 @@
 package onebot
 
 import (
+	"encoding/json"
 	"fmt"
+	"html"
+	"log"
 	"strconv"
 	"strings"
+)
+
+type MessageCategory string
+
+const (
+	CategoryChat  MessageCategory = "chat"
+	CategoryCmd   MessageCategory = "cmd"
+	CategoryShare MessageCategory = "share"
 )
 
 type Event struct {
@@ -72,7 +83,7 @@ func (e Event) CatText() string {
 //   - 私聊
 //   - 群聊并是一个回复
 //   - 群聊并 at 了 bot
-func (e Event) ProcessText() (text string, replyTo *int32, shouldBeIgnored, isCmd, isAt bool) {
+func (e Event) ProcessText() (text string, replyTo *int32, shouldBeIgnored bool, category MessageCategory, isAt bool) {
 	shouldBeIgnored = true
 
 	replyTo = e.ReplyTo()
@@ -90,20 +101,43 @@ func (e Event) ProcessText() (text string, replyTo *int32, shouldBeIgnored, isCm
 		}
 	}
 
-	text = e.CatText()
-
-	if shouldBeIgnored {
-		text = strings.TrimSpace(text)
-		if strings.HasPrefix(text, "v ") {
-			shouldBeIgnored = false
-			text = strings.TrimSpace(strings.TrimPrefix(text, "v"))
-		}
-	}
-
-	if strings.HasPrefix(text, "/") { // cmd
+	if rawMessage := strings.TrimSpace(e.RawMessage); strings.HasPrefix(rawMessage, "[CQ:json") {
 		shouldBeIgnored = false
-		isCmd = true
-		text = strings.TrimSpace(strings.TrimPrefix(text, "/"))
+		category = CategoryShare
+
+		rawMessage = strings.TrimPrefix(rawMessage, "[CQ:json,data=")
+		rawMessage = strings.TrimSuffix(rawMessage, "]")
+		rawMessage = html.UnescapeString(rawMessage)
+		var result struct {
+			Prompt string `json:"prompt"`
+			Meta   struct {
+				Detail struct {
+					QQDocURL string `json:"qqdocurl,omitempty"`
+				} `json:"detail_1,omitempty"`
+				News struct {
+					JumpUrl string `json:"jumpUrl,omitempty"`
+				} `json:"news,omitempty"`
+			} `json:"meta"`
+		}
+		if err := json.Unmarshal([]byte(rawMessage), &result); err == nil {
+			text = result.Prompt + "\n"
+			if len(result.Meta.Detail.QQDocURL) != 0 {
+				text += result.Meta.Detail.QQDocURL + "\n"
+			} else if len(result.Meta.News.JumpUrl) != 0 {
+				text += result.Meta.News.JumpUrl + "\n"
+			}
+		} else {
+			log.Printf("Failed to unmarshal: %v\n", err)
+		}
+	} else {
+		text = e.CatText()
+		if strings.HasPrefix(text, "/") { // cmd
+			shouldBeIgnored = false
+			category = CategoryCmd
+			text = strings.TrimSpace(strings.TrimPrefix(text, "/"))
+		} else {
+			category = CategoryChat
+		}
 	}
 
 	return
