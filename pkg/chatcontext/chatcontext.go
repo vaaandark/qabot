@@ -232,11 +232,11 @@ func loadSystemPrompt(path string) ([]Message, error) {
 func NewChatContext(db *leveldb.DB, privatePromptPath, groupPromptPath string) (*ChatContext, error) {
 	privatePrompt, err := loadSystemPrompt(privatePromptPath)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to load private prompt: %w", err)
+		return nil, fmt.Errorf("failed to load private prompt: %w", err)
 	}
 	groupPrompt, err := loadSystemPrompt(groupPromptPath)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to load group prompt: %w", err)
+		return nil, fmt.Errorf("failed to load group prompt: %w", err)
 	}
 	return &ChatContext{
 		db:            db,
